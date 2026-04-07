@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Hongsuan Internal",
-  description: "Hongsuan Intelligent internal file sharing and employee system.",
+  title: "宏算智能内部系统",
+  description: "宏算智能内部文件共享与员工系统。",
 };
 
 const bodyStyle = {

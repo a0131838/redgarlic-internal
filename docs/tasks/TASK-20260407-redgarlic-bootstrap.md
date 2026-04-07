@@ -10,6 +10,7 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - prepare for file sharing MVP and later employee system expansion
 - implement the first usable admin setup, login, and shared file flow
 - prepare shared file storage for future Tencent COS integration without changing the business pages
+- replace placeholder text branding with the provided Macrocosm logo asset on core entry pages
 
 ## Decisions
 - keep the application on the existing server, but isolate runtime, port, env, and database

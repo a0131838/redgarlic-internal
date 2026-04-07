@@ -22,7 +22,7 @@ export default async function AdminHomePage() {
         }}
       >
         <div style={{ fontSize: 13, color: "#9a3412", fontWeight: 700, letterSpacing: 1 }}>
-          INTERNAL CONSOLE
+          MACROCOSM AI
         </div>
         <h1 style={{ marginBottom: 10 }}>欢迎，{employee.name}</h1>
         <p style={{ marginTop: 0, color: "#4b5563", lineHeight: 1.7 }}>

@@ -61,9 +61,17 @@ export default async function AdminLoginPage({
           boxShadow: "0 24px 60px rgba(15, 23, 42, 0.08)",
         }}
       >
-        <div style={{ color: "#9a3412", fontWeight: 700, letterSpacing: 1 }}>
-          REDGARLICAI.COM
-        </div>
+        <img
+          src="/macrocosm-logo.png"
+          alt="宏算智能"
+          style={{
+            display: "block",
+            width: "100%",
+            maxWidth: 340,
+            height: "auto",
+            marginBottom: 18,
+          }}
+        />
         <h1 style={{ marginBottom: 12 }}>管理员登录入口</h1>
         <p style={{ marginTop: 0, color: "#4b5563", lineHeight: 1.7 }}>
           先用内部账号登录，再进入共享文件库。当前首期版本聚焦文件传输、共享和操作留痕。

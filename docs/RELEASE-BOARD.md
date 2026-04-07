@@ -13,6 +13,7 @@
   - team access page for creating employee accounts and managing password/status
   - shared files can now be stored with `local` or `s3` driver via env configuration
   - COS switch instructions are documented for server deployment
+  - homepage and admin login now display the Macrocosm logo branding asset
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

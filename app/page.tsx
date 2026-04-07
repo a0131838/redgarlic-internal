@@ -25,9 +25,20 @@ export default function HomePage() {
           color: "#fff7ed",
         }}
       >
-        <div style={{ fontSize: 14, letterSpacing: 1.2, opacity: 0.85 }}>
-          HONGSUAN INTELLIGENT
-        </div>
+        <img
+          src="/macrocosm-logo.png"
+          alt="宏算智能"
+          style={{
+            display: "block",
+            maxWidth: "min(100%, 520px)",
+            width: "100%",
+            height: "auto",
+            marginBottom: 18,
+            background: "#fff",
+            borderRadius: 16,
+            padding: 12,
+          }}
+        />
         <h1 style={{ margin: "10px 0 12px", fontSize: 40, lineHeight: 1.1 }}>
           宏算智能内部系统
         </h1>
