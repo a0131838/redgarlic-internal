@@ -171,6 +171,7 @@ export async function storeSharedFile(file: File, categoryName: string, folderNa
         Bucket: config.bucket,
         Key: objectKey,
         Body: stream,
+        ContentLength: file.size,
         ContentType: mimeType || "application/octet-stream",
       })
     );

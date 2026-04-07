@@ -4,6 +4,20 @@ import { clearSession } from "@/lib/auth";
 const SEE_OTHER = 303;
 
 function requestOrigin(request: Request) {
+  const originHeader = request.headers.get("origin");
+  if (originHeader) {
+    try {
+      return new URL(originHeader).origin;
+    } catch {}
+  }
+
+  const refererHeader = request.headers.get("referer");
+  if (refererHeader) {
+    try {
+      return new URL(refererHeader).origin;
+    } catch {}
+  }
+
   const fallback = new URL(request.url);
   const host =
     request.headers.get("x-forwarded-host") ||
