@@ -43,20 +43,43 @@ function buildFolderOptions(
   parentId: string | null = null,
   depth = 0,
   acc: Array<{ value: string; label: string }> = [],
+  excludedIds?: Set<string>,
 ) {
   const siblings = folders
     .filter((folder) => folder.parentId === parentId)
     .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
 
   for (const folder of siblings) {
+    if (excludedIds?.has(folder.id)) {
+      buildFolderOptions(folders, folder.id, depth + 1, acc, excludedIds);
+      continue;
+    }
     acc.push({
       value: folder.id,
       label: `${"　".repeat(depth)}${depth > 0 ? "└ " : ""}${folder.name}`,
     });
-    buildFolderOptions(folders, folder.id, depth + 1, acc);
+    buildFolderOptions(folders, folder.id, depth + 1, acc, excludedIds);
   }
 
   return acc;
+}
+
+function collectDescendantIds(folders: FolderListItem[], folderId: string) {
+  const ids = new Set<string>([folderId]);
+  const stack = [folderId];
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+    for (const folder of folders) {
+      if (folder.parentId === current && !ids.has(folder.id)) {
+        ids.add(folder.id);
+        stack.push(folder.id);
+      }
+    }
+  }
+
+  return ids;
 }
 
 function buildHref(params: {
@@ -178,6 +201,9 @@ export default async function SharedFilesPage({
   const folders = allFolders.filter((folder) => folder.parentId === (currentFolderRecord?.id || null));
   const folderOptions = buildFolderOptions(allFolders);
   const moveTargetOptions = [{ value: "", label: "根目录" }, ...folderOptions];
+  const currentFolderMoveOptions = currentFolderRecord
+    ? [{ value: "", label: "根目录" }, ...buildFolderOptions(allFolders, null, 0, [], collectDescendantIds(allFolders, currentFolderRecord.id))]
+    : [];
 
   const rootHref = buildHref({
     categoryId: activeCategory?.id,
@@ -416,6 +442,27 @@ export default async function SharedFilesPage({
                               重命名
                             </button>
                           </form>
+                          <form action="/admin/shared-files/folder-move" method="post" style={{ display: "grid", gap: 8 }}>
+                            <input type="hidden" name="folderId" value={folder.id} />
+                            <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                            <select
+                              name="targetParentId"
+                              defaultValue={folder.parentId || ""}
+                              style={{ padding: 8, borderRadius: 10, border: "1px solid #d1d5db", background: "#fff" }}
+                            >
+                              {[{ value: "", label: "根目录" }, ...buildFolderOptions(allFolders, null, 0, [], collectDescendantIds(allFolders, folder.id))].map((option) => (
+                                <option key={option.value || "root"} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="submit"
+                              style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid #bfdbfe", color: "#1d4ed8", background: "#eff6ff" }}
+                            >
+                              移动文件夹
+                            </button>
+                          </form>
                           <form action="/admin/shared-files/folder-delete" method="post">
                             <input type="hidden" name="folderId" value={folder.id} />
                             <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
@@ -492,6 +539,23 @@ export default async function SharedFilesPage({
                       {isManager ? (
                         <td style={{ padding: "14px 8px" }}>
                           <div style={{ display: "grid", gap: 8 }}>
+                            <form action="/admin/shared-files/rename" method="post" style={{ display: "grid", gap: 8 }}>
+                              <input type="hidden" name="fileId" value={file.id} />
+                              <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                              <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                              <input
+                                name="title"
+                                defaultValue={file.title}
+                                required
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                              />
+                              <button
+                                type="submit"
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                              >
+                                重命名文件
+                              </button>
+                            </form>
                             <form action="/admin/shared-files/move" method="post" style={{ display: "grid", gap: 8 }}>
                               <input type="hidden" name="fileId" value={file.id} />
                               <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
@@ -592,7 +656,7 @@ export default async function SharedFilesPage({
                 <div>
                   <h2 style={{ margin: 0 }}>当前文件夹管理</h2>
                   <div style={{ marginTop: 8, color: "#6b7280", fontSize: 13 }}>
-                    可重命名当前目录；只有空文件夹才能删除。
+                    可重命名、移动当前目录；只有空文件夹才能删除。
                   </div>
                 </div>
                 <form action="/admin/shared-files/folder-rename" method="post" style={{ display: "grid", gap: 12 }}>
@@ -611,6 +675,30 @@ export default async function SharedFilesPage({
                   </label>
                   <button type="submit" style={{ borderRadius: 999, border: 0, background: "#111827", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
                     重命名当前文件夹
+                  </button>
+                </form>
+                <form action="/admin/shared-files/folder-move" method="post" style={{ display: "grid", gap: 12 }}>
+                  <input type="hidden" name="folderId" value={currentFolderRecord.id} />
+                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span>移动到</span>
+                    <select
+                      name="targetParentId"
+                      defaultValue={currentFolderRecord.parentId || ""}
+                      style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                    >
+                      {currentFolderMoveOptions.map((option) => (
+                        <option key={option.value || "root"} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="submit"
+                    style={{ borderRadius: 999, border: 0, background: "#eff6ff", color: "#1d4ed8", padding: "12px 16px", fontWeight: 700 }}
+                  >
+                    移动当前文件夹
                   </button>
                 </form>
                 <form action="/admin/shared-files/folder-delete" method="post">

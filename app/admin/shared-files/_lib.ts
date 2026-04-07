@@ -103,6 +103,18 @@ async function ensureFolderInCategory(folderId: string, categoryId: string) {
   return lineage;
 }
 
+function buildSharedFilesParams(input: {
+  categoryId?: string | null;
+  folderId?: string | null;
+  msg: string;
+}) {
+  const params = new URLSearchParams();
+  if (input.categoryId) params.set("categoryId", input.categoryId);
+  if (input.folderId) params.set("folderId", input.folderId);
+  params.set("msg", input.msg);
+  return params;
+}
+
 export async function addCategoryFromForm(formData: FormData) {
   const name = text(formData.get("name")).slice(0, 40);
   if (!name) {
@@ -208,6 +220,56 @@ export async function renameFolderFromForm(formData: FormData) {
   }
   params.set("msg", "folder-renamed");
   return { successPath: sharedFilesPath(params.toString(), focusId || `folder-${folderId}`) };
+}
+
+export async function moveFolderFromForm(formData: FormData) {
+  const folderId = text(formData.get("folderId"));
+  const categoryId = text(formData.get("categoryId"));
+  const targetParentId = text(formData.get("targetParentId")) || null;
+
+  if (!folderId || !categoryId) {
+    return { error: "无效操作" };
+  }
+
+  const folder = await getFolderRecord(folderId);
+  if (!folder || folder.categoryId !== categoryId) {
+    return { error: "文件夹不存在" };
+  }
+
+  if (folder.parentId === targetParentId) {
+    const params = buildSharedFilesParams({
+      categoryId,
+      folderId,
+      msg: "folder-move-skipped",
+    });
+    return { successPath: sharedFilesPath(params.toString(), `folder-${folderId}`) };
+  }
+
+  if (targetParentId) {
+    const lineage = await ensureFolderInCategory(targetParentId, categoryId);
+    if (!lineage?.length) {
+      return { error: "目标目录不存在" };
+    }
+    if (lineage.some((item) => item.id === folderId)) {
+      return { error: "不能把文件夹移动到它自己的子目录里" };
+    }
+  }
+
+  try {
+    await prisma.sharedFolder.update({
+      where: { id: folderId },
+      data: { parentId: targetParentId },
+    });
+  } catch {
+    return { error: "目标目录中已存在同名文件夹" };
+  }
+
+  const params = buildSharedFilesParams({
+    categoryId,
+    folderId,
+    msg: "folder-moved",
+  });
+  return { successPath: sharedFilesPath(params.toString(), "current-folder-admin") };
 }
 
 export async function deleteFolderFromForm(formData: FormData) {
@@ -497,5 +559,66 @@ export async function moveSharedFileFromForm(formData: FormData, actorId: string
   params.set("categoryId", categoryId);
   if (targetFolderId) params.set("folderId", targetFolderId);
   params.set("msg", "file-moved");
+  return { successPath: sharedFilesPath(params.toString(), `file-${fileId}`) };
+}
+
+export async function renameSharedFileFromForm(formData: FormData, actorId: string) {
+  const fileId = text(formData.get("fileId"));
+  const categoryId = text(formData.get("categoryId"));
+  const folderId = text(formData.get("folderId")) || null;
+  const nextTitle = text(formData.get("title")).slice(0, 120);
+
+  if (!fileId || !categoryId || !nextTitle) {
+    return { error: "文件标题不能为空" };
+  }
+
+  const file = await prisma.sharedFile.findUnique({
+    where: { id: fileId },
+    select: {
+      id: true,
+      title: true,
+      categoryId: true,
+      folderId: true,
+      status: true,
+    },
+  });
+
+  if (!file || file.categoryId !== categoryId) {
+    return { error: "文件不存在" };
+  }
+  if (file.status === SharedFileStatus.DELETED) {
+    return { error: "已删除文件不能重命名" };
+  }
+
+  if (file.title === nextTitle) {
+    const params = buildSharedFilesParams({
+      categoryId,
+      folderId,
+      msg: "file-rename-skipped",
+    });
+    return { successPath: sharedFilesPath(params.toString(), `file-${fileId}`) };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.sharedFile.update({
+      where: { id: fileId },
+      data: { title: nextTitle },
+    });
+    await tx.sharedFileAudit.create({
+      data: {
+        fileId,
+        actorId,
+        action: "RENAME",
+        note: nextTitle,
+        fileTitleSnapshot: nextTitle,
+      },
+    });
+  });
+
+  const params = buildSharedFilesParams({
+    categoryId,
+    folderId,
+    msg: "file-renamed",
+  });
   return { successPath: sharedFilesPath(params.toString(), `file-${fileId}`) };
 }

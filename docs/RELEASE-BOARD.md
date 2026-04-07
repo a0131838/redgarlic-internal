@@ -30,6 +30,8 @@
   - uploads now enforce an app-level size cap and stream file writes instead of materializing a second full in-memory buffer
   - COS-backed streaming uploads now send an explicit content length so Tencent COS accepts the streamed object write
   - file explorer now supports renaming folders, deleting empty folders, and moving files into other directories from the same screen
+  - managers can now rename files in place without changing the underlying stored object
+  - folders can now be moved into other directories, with guards against moving a folder into itself or its descendants
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

@@ -26,3 +26,5 @@
 - added server-side upload size enforcement and switched shared-file writes to streaming I/O to avoid buffering a second full copy of every upload in memory
 - supplied explicit content length for COS streaming uploads so Tencent-compatible S3 endpoints accept the streamed body
 - added desktop-style folder management actions for renaming folders, deleting empty folders, and moving files between directories
+- added in-place file rename controls so managers can correct document titles without re-uploading the file
+- added folder move controls with descendant-loop protection so directories can be reorganized without creating invalid tree cycles

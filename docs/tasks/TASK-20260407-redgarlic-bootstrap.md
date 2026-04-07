@@ -33,3 +33,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - enforce a server-side upload byte cap and stream shared-file writes to reduce memory pressure during uploads
 - include content length when streaming uploads to Tencent COS so the S3-compatible endpoint accepts the request body
 - complete the desktop-style file explorer with folder rename, empty-folder deletion, and per-file move controls
+- continue the desktop-style explorer with in-place file rename and folder move actions for day-to-day reorganization
