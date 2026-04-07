@@ -35,6 +35,7 @@
   - managers can now select multiple files in the current directory and move them together to another folder or back to root
   - folder delete controls now explain the remaining child-folder/file counts instead of only showing a disabled button
   - the file action area now uses a tighter horizontal layout so rename, move, archive, and delete controls fit more naturally per row
+  - the current-directory batch toolbar now supports move, archive, and mark-delete operations on multiple selected files
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

@@ -31,3 +31,4 @@
 - added bulk file selection and move controls so managers can reorganize many files from the current directory in one action
 - added delete-state hints on folder cards and current-folder management so operators can immediately see why a non-empty folder cannot be removed
 - compressed the per-file action area into a denser desktop-style layout so each file row stays readable even with multiple controls
+- upgraded the batch toolbar from move-only to multi-action so selected files can now be moved, archived, or soft-deleted together

@@ -521,7 +521,16 @@ export default async function SharedFilesPage({
               >
                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                 <div style={{ fontWeight: 700, color: "#1e3a8a" }}>批量整理当前目录文件</div>
-                <div style={{ display: "grid", gap: 10, gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center" }}>
+                <div style={{ display: "grid", gap: 10, gridTemplateColumns: "180px minmax(0, 1fr) auto", alignItems: "center" }}>
+                  <select
+                    name="bulkAction"
+                    defaultValue="MOVE"
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid #bfdbfe", background: "#fff" }}
+                  >
+                    <option value="MOVE">批量移动</option>
+                    <option value="ARCHIVE">批量归档</option>
+                    <option value="DELETE">批量标记删除</option>
+                  </select>
                   <select
                     name="targetFolderId"
                     defaultValue={currentFolderRecord?.id || ""}
@@ -537,11 +546,11 @@ export default async function SharedFilesPage({
                     type="submit"
                     style={{ padding: "10px 16px", borderRadius: 999, border: 0, background: "#1d4ed8", color: "#fff", fontWeight: 700 }}
                   >
-                    移动选中文件
+                    执行批量操作
                   </button>
                 </div>
                 <div style={{ color: "#475569", fontSize: 13 }}>
-                  在下方勾选多个文件后，一次性移动到目标目录。
+                  先在下方勾选文件。只有“批量移动”会使用目标目录，归档和标记删除会忽略右侧目录选择。
                 </div>
               </form>
             ) : null}

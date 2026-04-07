@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import {
-  moveSharedFilesFromForm,
+  applyBulkSharedFileActionFromForm,
   redirectUrl,
   requireManagerForRoute,
 } from "../_lib";
@@ -15,7 +15,10 @@ export async function POST(request: Request) {
   }
 
   const formData = await request.formData();
-  const result = await moveSharedFilesFromForm(formData, auth.employee.id);
+  const result = await applyBulkSharedFileActionFromForm(formData, {
+    id: auth.employee.id,
+    email: auth.employee.email,
+  });
   revalidatePath("/admin/shared-files");
 
   const successPath = "successPath" in result ? result.successPath : undefined;

@@ -562,8 +562,12 @@ export async function moveSharedFileFromForm(formData: FormData, actorId: string
   return { successPath: sharedFilesPath(params.toString(), `file-${fileId}`) };
 }
 
-export async function moveSharedFilesFromForm(formData: FormData, actorId: string) {
+export async function applyBulkSharedFileActionFromForm(
+  formData: FormData,
+  actor: { id: string; email: string },
+) {
   const categoryId = text(formData.get("categoryId"));
+  const bulkAction = text(formData.get("bulkAction")).toUpperCase();
   const targetFolderId = text(formData.get("targetFolderId")) || null;
   const fileIds = Array.from(
     new Set(
@@ -575,16 +579,7 @@ export async function moveSharedFilesFromForm(formData: FormData, actorId: strin
   );
 
   if (!categoryId || fileIds.length === 0) {
-    return { error: "请先选择要移动的文件" };
-  }
-
-  let targetLabel = "根目录";
-  if (targetFolderId) {
-    const lineage = await ensureFolderInCategory(targetFolderId, categoryId);
-    if (!lineage?.length) {
-      return { error: "目标目录不存在" };
-    }
-    targetLabel = lineage.map((folder) => folder.name).join(" / ");
+    return { error: "请先选择要处理的文件" };
   }
 
   const files = await prisma.sharedFile.findMany({
@@ -603,45 +598,107 @@ export async function moveSharedFilesFromForm(formData: FormData, actorId: strin
   if (files.length !== fileIds.length) {
     return { error: "部分文件不存在或已不在当前分类中" };
   }
-  if (files.some((file) => file.status === SharedFileStatus.DELETED)) {
-    return { error: "已删除文件不能批量移动" };
-  }
 
-  const filesToMove = files.filter((file) => file.folderId !== targetFolderId);
-  if (filesToMove.length === 0) {
+  if (bulkAction === "MOVE") {
+    if (files.some((file) => file.status === SharedFileStatus.DELETED)) {
+      return { error: "已删除文件不能批量移动" };
+    }
+
+    let targetLabel = "根目录";
+    if (targetFolderId) {
+      const lineage = await ensureFolderInCategory(targetFolderId, categoryId);
+      if (!lineage?.length) {
+        return { error: "目标目录不存在" };
+      }
+      targetLabel = lineage.map((folder) => folder.name).join(" / ");
+    }
+
+    const filesToMove = files.filter((file) => file.folderId !== targetFolderId);
+    if (filesToMove.length === 0) {
+      const params = buildSharedFilesParams({
+        categoryId,
+        folderId: targetFolderId,
+        msg: "file-bulk-move-skipped",
+      });
+      return { successPath: sharedFilesPath(params.toString(), "file-list") };
+    }
+
+    await prisma.$transaction(async (tx) => {
+      for (const file of filesToMove) {
+        await tx.sharedFile.update({
+          where: { id: file.id },
+          data: { folderId: targetFolderId },
+        });
+      }
+
+      await tx.sharedFileAudit.createMany({
+        data: filesToMove.map((file) => ({
+          fileId: file.id,
+          actorId: actor.id,
+          action: "MOVE_BULK",
+          note: targetLabel,
+          fileTitleSnapshot: file.title,
+        })),
+      });
+    });
+
     const params = buildSharedFilesParams({
       categoryId,
       folderId: targetFolderId,
-      msg: "file-bulk-move-skipped",
+      msg: `file-bulk-moved-${filesToMove.length}`,
     });
     return { successPath: sharedFilesPath(params.toString(), "file-list") };
   }
 
-  await prisma.$transaction(async (tx) => {
-    for (const file of filesToMove) {
-      await tx.sharedFile.update({
-        where: { id: file.id },
-        data: { folderId: targetFolderId },
+  if (bulkAction === "ARCHIVE" || bulkAction === "DELETE") {
+    const nextStatus =
+      bulkAction === "ARCHIVE" ? SharedFileStatus.ARCHIVED : SharedFileStatus.DELETED;
+    const filesToUpdate = files.filter((file) => file.status !== nextStatus && file.status !== SharedFileStatus.DELETED);
+
+    if (filesToUpdate.length === 0) {
+      const params = buildSharedFilesParams({
+        categoryId,
+        folderId: targetFolderId,
+        msg: bulkAction === "ARCHIVE" ? "file-bulk-archive-skipped" : "file-bulk-delete-skipped",
       });
+      return { successPath: sharedFilesPath(params.toString(), "file-list") };
     }
 
-    await tx.sharedFileAudit.createMany({
-      data: filesToMove.map((file) => ({
-        fileId: file.id,
-        actorId,
-        action: "MOVE_BULK",
-        note: targetLabel,
-        fileTitleSnapshot: file.title,
-      })),
-    });
-  });
+    await prisma.$transaction(async (tx) => {
+      for (const file of filesToUpdate) {
+        await tx.sharedFile.update({
+          where: { id: file.id },
+          data: {
+            status: nextStatus,
+            archivedAt: nextStatus === SharedFileStatus.ARCHIVED ? new Date() : null,
+            archivedByEmail: actor.email,
+          },
+        });
+      }
 
-  const params = buildSharedFilesParams({
-    categoryId,
-    folderId: targetFolderId,
-    msg: `file-bulk-moved-${filesToMove.length}`,
-  });
-  return { successPath: sharedFilesPath(params.toString(), "file-list") };
+      await tx.sharedFileAudit.createMany({
+        data: filesToUpdate.map((file) => ({
+          fileId: file.id,
+          actorId: actor.id,
+          action: `STATUS_${nextStatus}_BULK`,
+          note: file.title,
+          fileTitleSnapshot: file.title,
+        })),
+      });
+    });
+
+    const params = buildSharedFilesParams({
+      categoryId,
+      folderId: targetFolderId,
+      msg:
+        bulkAction === "ARCHIVE"
+          ? `file-bulk-archived-${filesToUpdate.length}`
+          : `file-bulk-deleted-${filesToUpdate.length}`,
+    });
+    return { successPath: sharedFilesPath(params.toString(), "file-list") };
+  }
+
+  return { error: "不支持的批量操作" };
 }
 
 export async function renameSharedFileFromForm(formData: FormData, actorId: string) {
