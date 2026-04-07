@@ -28,6 +28,7 @@
   - logout now requires `POST`, reducing accidental logouts from link prefetches or cross-site GET requests
   - logout redirects now rebuild their public origin from proxy headers instead of leaking the internal app host
   - uploads now enforce an app-level size cap and stream file writes instead of materializing a second full in-memory buffer
+  - COS-backed streaming uploads now send an explicit content length so Tencent COS accepts the streamed object write
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

@@ -31,3 +31,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - move logout side effects behind `POST` rather than `GET`
 - rebuild logout redirects from forwarded host/protocol headers so sign-out lands on the public domain in proxied deployments
 - enforce a server-side upload byte cap and stream shared-file writes to reduce memory pressure during uploads
+- include content length when streaming uploads to Tencent COS so the S3-compatible endpoint accepts the request body
