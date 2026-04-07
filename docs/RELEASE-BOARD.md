@@ -22,6 +22,7 @@
   - shared-file form redirects now rebuild their origin from proxy headers, preventing localhost bounce-backs
   - shared-file redirects now include anchors so admins stay near the row or section they just changed
   - shared files now support nested folders with computer-style browsing, breadcrumb navigation, and in-place folder creation
+  - shared-file POST handlers now answer with `303 See Other`, preventing browsers from replaying multipart form posts into the page route after upload
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

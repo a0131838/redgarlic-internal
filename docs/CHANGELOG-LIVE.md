@@ -18,3 +18,4 @@
 - corrected shared-file POST redirects so reverse-proxied requests return to the real domain instead of localhost
 - preserved useful scroll position after shared-file actions so row updates and deletes no longer bounce the user to the top
 - upgraded the shared file area to a folder-based explorer with nested directories, breadcrumbs, and current-folder uploads
+- changed shared-file form redirects from `307` to `303` so browser follow-ups become `GET` requests and upload completion no longer crashes on the destination page

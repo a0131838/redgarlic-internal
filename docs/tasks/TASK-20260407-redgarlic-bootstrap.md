@@ -25,3 +25,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - build shared-file redirects from forwarded host/protocol headers so proxy deployments never bounce users to localhost
 - preserve operator context after shared-file mutations by redirecting back to the touched row or relevant section
 - evolve the shared file area from a flat table into a desktop-like folder explorer with real nested directories
+- return `303 See Other` from shared-file mutation routes so successful POST submissions always land back on the explorer through a safe `GET`

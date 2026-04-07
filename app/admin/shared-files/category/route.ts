@@ -6,10 +6,12 @@ import {
   requireManagerForRoute,
 } from "../_lib";
 
+const SEE_OTHER = 303;
+
 export async function POST(request: Request) {
   const auth = await requireManagerForRoute(request);
   if (!("employee" in auth)) {
-    return NextResponse.redirect(auth.redirectTo);
+    return NextResponse.redirect(auth.redirectTo, SEE_OTHER);
   }
 
   const formData = await request.formData();
@@ -21,8 +23,9 @@ export async function POST(request: Request) {
   if (!successPath) {
     return NextResponse.redirect(
       redirectUrl(request, `/admin/shared-files?err=${encodeURIComponent(errorMessage)}`),
+      SEE_OTHER,
     );
   }
 
-  return NextResponse.redirect(redirectUrl(request, successPath));
+  return NextResponse.redirect(redirectUrl(request, successPath), SEE_OTHER);
 }
