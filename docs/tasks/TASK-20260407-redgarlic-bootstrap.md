@@ -39,3 +39,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - expand batch file handling from move-only into common desktop actions like archive and soft delete
 - collapse secondary per-file actions into a tighter “more actions” interaction pattern
 - replace raw action codes in explorer feedback with human-readable Chinese messages and align folder-card actions with the same disclosure pattern
+- ship a bundled explorer polish pass with sorting controls, stronger path navigation, and confirmation prompts for dangerous actions

@@ -34,3 +34,4 @@
 - upgraded the batch toolbar from move-only to multi-action so selected files can now be moved, archived, or soft-deleted together
 - moved per-file secondary actions into a compact “more actions” disclosure so the explorer keeps a cleaner desktop-style rhythm
 - translated internal success codes into human-readable Chinese feedback and moved folder-card secondary actions into the same “more actions” pattern as file rows
+- added folder/file sort selectors, clearer current-path navigation, and confirmation prompts for destructive explorer actions as the first bundled desktop-style polish pass

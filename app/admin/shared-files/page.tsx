@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureDefaultFileCategories } from "@/lib/bootstrap";
 import { requireEmployee } from "@/lib/auth";
 import { getFolderLineage } from "./_lib";
+import { BulkActionSubmitButton, ConfirmSubmitButton } from "./confirm-submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +33,34 @@ type FolderListItem = {
   name: string;
   categoryId: string;
   parentId: string | null;
+  createdAt: Date;
   _count: {
     children: number;
     files: number;
   };
 };
+
+type FolderSort = "name-asc" | "name-desc" | "newest" | "oldest";
+type FileSort = "newest" | "oldest" | "name-asc" | "name-desc" | "size-desc" | "size-asc";
+
+const DEFAULT_FOLDER_SORT: FolderSort = "name-asc";
+const DEFAULT_FILE_SORT: FileSort = "newest";
+
+const folderSortOptions: Array<{ value: FolderSort; label: string }> = [
+  { value: "name-asc", label: "文件夹名 A-Z" },
+  { value: "name-desc", label: "文件夹名 Z-A" },
+  { value: "newest", label: "文件夹最新" },
+  { value: "oldest", label: "文件夹最早" },
+];
+
+const fileSortOptions: Array<{ value: FileSort; label: string }> = [
+  { value: "newest", label: "文件最新" },
+  { value: "oldest", label: "文件最早" },
+  { value: "name-asc", label: "文件名 A-Z" },
+  { value: "name-desc", label: "文件名 Z-A" },
+  { value: "size-desc", label: "文件最大" },
+  { value: "size-asc", label: "文件最小" },
+];
 
 function buildFolderOptions(
   folders: FolderListItem[],
@@ -87,6 +111,8 @@ function buildHref(params: {
   folderId?: string;
   q?: string;
   status?: string;
+  folderSort?: string;
+  fileSort?: string;
   msg?: string;
   err?: string;
 }) {
@@ -95,10 +121,54 @@ function buildHref(params: {
   if (params.folderId) search.set("folderId", params.folderId);
   if (params.q) search.set("q", params.q);
   if (params.status) search.set("status", params.status);
+  if (params.folderSort) search.set("folderSort", params.folderSort);
+  if (params.fileSort) search.set("fileSort", params.fileSort);
   if (params.msg) search.set("msg", params.msg);
   if (params.err) search.set("err", params.err);
   const qs = search.toString();
   return qs ? `/admin/shared-files?${qs}` : "/admin/shared-files";
+}
+
+function parseFolderSort(value: string): FolderSort {
+  return folderSortOptions.some((option) => option.value === value)
+    ? (value as FolderSort)
+    : DEFAULT_FOLDER_SORT;
+}
+
+function parseFileSort(value: string): FileSort {
+  return fileSortOptions.some((option) => option.value === value)
+    ? (value as FileSort)
+    : DEFAULT_FILE_SORT;
+}
+
+function compareText(a: string, b: string) {
+  return a.localeCompare(b, "zh-CN");
+}
+
+function sortFolders(folders: FolderListItem[], sort: FolderSort) {
+  return [...folders].sort((a, b) => {
+    if (sort === "name-desc") return compareText(b.name, a.name);
+    if (sort === "newest") return b.createdAt.getTime() - a.createdAt.getTime();
+    if (sort === "oldest") return a.createdAt.getTime() - b.createdAt.getTime();
+    return compareText(a.name, b.name);
+  });
+}
+
+function sortFiles<
+  T extends {
+    title: string;
+    fileSizeBytes: number;
+    createdAt: Date;
+  },
+>(files: T[], sort: FileSort) {
+  return [...files].sort((a, b) => {
+    if (sort === "oldest") return a.createdAt.getTime() - b.createdAt.getTime();
+    if (sort === "name-asc") return compareText(a.title, b.title);
+    if (sort === "name-desc") return compareText(b.title, a.title);
+    if (sort === "size-desc") return b.fileSizeBytes - a.fileSizeBytes;
+    if (sort === "size-asc") return a.fileSizeBytes - b.fileSizeBytes;
+    return b.createdAt.getTime() - a.createdAt.getTime();
+  });
 }
 
 function humanizeFeedbackMessage(msg: string) {
@@ -144,6 +214,8 @@ export default async function SharedFilesPage({
     categoryId?: string;
     folderId?: string;
     status?: string;
+    folderSort?: string;
+    fileSort?: string;
     msg?: string;
     err?: string;
   }>;
@@ -158,6 +230,8 @@ export default async function SharedFilesPage({
   const requestedCategoryId = text(sp?.categoryId);
   const requestedFolderId = text(sp?.folderId);
   const status = text(sp?.status).toUpperCase();
+  const folderSort = parseFolderSort(text(sp?.folderSort));
+  const fileSort = parseFileSort(text(sp?.fileSort));
 
   const categories = await prisma.fileCategory.findMany({
     where: { isActive: true },
@@ -217,7 +291,7 @@ export default async function SharedFilesPage({
               },
             },
           },
-          orderBy: [{ name: "asc" }],
+          orderBy: [{ createdAt: "desc" }],
         }),
         prisma.sharedFile.findMany({
           where: fileWhere,
@@ -233,7 +307,11 @@ export default async function SharedFilesPage({
 
   const folderMap = new Map(allFolders.map((folder) => [folder.id, folder]));
   const currentFolderRecord = currentFolder ? folderMap.get(currentFolder.id) || null : null;
-  const folders = allFolders.filter((folder) => folder.parentId === (currentFolderRecord?.id || null));
+  const folders = sortFolders(
+    allFolders.filter((folder) => folder.parentId === (currentFolderRecord?.id || null)),
+    folderSort,
+  );
+  const sortedFiles = sortFiles(files, fileSort);
   const folderOptions = buildFolderOptions(allFolders);
   const moveTargetOptions = [{ value: "", label: "根目录" }, ...folderOptions];
   const currentFolderMoveOptions = currentFolderRecord
@@ -244,8 +322,21 @@ export default async function SharedFilesPage({
     categoryId: activeCategory?.id,
     q,
     status,
+    folderSort,
+    fileSort,
   });
   const feedbackMessage = humanizeFeedbackMessage(text(sp?.msg));
+  const parentFolder = currentFolderRecord?.parentId ? folderMap.get(currentFolderRecord.parentId) || null : null;
+  const parentFolderHref = parentFolder
+    ? buildHref({
+        categoryId: activeCategory?.id,
+        folderId: parentFolder.id,
+        q,
+        status,
+        folderSort,
+        fileSort,
+      })
+    : rootHref;
 
   return (
     <main style={{ maxWidth: 1440, margin: "0 auto", padding: 28, display: "grid", gap: 18 }}>
@@ -377,6 +468,30 @@ export default async function SharedFilesPage({
                 筛选
               </button>
             </div>
+            <div style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr 1fr" }}>
+              <select
+                name="folderSort"
+                defaultValue={folderSort}
+                style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+              >
+                {folderSortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="fileSort"
+                defaultValue={fileSort}
+                style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+              >
+                {fileSortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
             {currentFolder ? <input type="hidden" name="folderId" value={currentFolder.id} /> : null}
           </form>
 
@@ -400,6 +515,9 @@ export default async function SharedFilesPage({
                     categoryId: activeCategory?.id,
                     folderId: folder.id,
                     status,
+                    q,
+                    folderSort,
+                    fileSort,
                   })}
                   style={{ color: folder.id === currentFolder?.id ? "#111827" : "#1d4ed8", textDecoration: "none", fontWeight: 700 }}
                 >
@@ -412,11 +530,24 @@ export default async function SharedFilesPage({
           <section style={{ display: "grid", gap: 12 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
               <h2 style={{ margin: 0, fontSize: 18 }}>当前目录</h2>
-              {currentFolder ? (
-                <Link href={rootHref} style={{ color: "#1d4ed8", textDecoration: "none", fontSize: 14 }}>
-                  返回根目录
-                </Link>
-              ) : null}
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                {currentFolder ? (
+                  <Link href={parentFolderHref} style={{ color: "#1d4ed8", textDecoration: "none", fontSize: 14 }}>
+                    返回上一级
+                  </Link>
+                ) : null}
+                {currentFolder ? (
+                  <Link href={rootHref} style={{ color: "#1d4ed8", textDecoration: "none", fontSize: 14 }}>
+                    返回根目录
+                  </Link>
+                ) : null}
+              </div>
+            </div>
+            <div style={{ padding: 12, borderRadius: 16, background: "#f8fafc", color: "#475569", fontSize: 13 }}>
+              当前位置：
+              <span style={{ marginLeft: 6, color: "#111827", fontWeight: 700 }}>
+                {[activeCategory?.name || "共享文件", ...validFolderLineage.map((folder) => folder.name)].join(" / ")}
+              </span>
             </div>
 
             {folders.length > 0 ? (
@@ -526,8 +657,8 @@ export default async function SharedFilesPage({
                                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                                 <input type="hidden" name="returnFolderId" value={currentFolderRecord?.id || ""} />
                                 <input type="hidden" name="focusId" value="file-list" />
-                                <button
-                                  type="submit"
+                                <ConfirmSubmitButton
+                                  confirmMessage={`确定要删除文件夹“${folder.name}”吗？`}
                                   disabled={!isEmptyFolder}
                                   style={{
                                     width: "100%",
@@ -540,7 +671,7 @@ export default async function SharedFilesPage({
                                   }}
                                 >
                                   {isEmptyFolder ? "删除空文件夹" : "含内容，不能删除"}
-                                </button>
+                                </ConfirmSubmitButton>
                                 <div style={{ marginTop: 6, color: isEmptyFolder ? "#166534" : "#6b7280", fontSize: 12, lineHeight: 1.5 }}>
                                   {folderDeleteHint}
                                 </div>
@@ -599,12 +730,9 @@ export default async function SharedFilesPage({
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="submit"
+                  <BulkActionSubmitButton
                     style={{ padding: "10px 16px", borderRadius: 999, border: 0, background: "#1d4ed8", color: "#fff", fontWeight: 700 }}
-                  >
-                    执行批量操作
-                  </button>
+                  />
                 </div>
                 <div style={{ color: "#475569", fontSize: 13 }}>
                   先在下方勾选文件。只有“批量移动”会使用目标目录，归档和标记删除会忽略右侧目录选择。
@@ -625,7 +753,7 @@ export default async function SharedFilesPage({
                   </tr>
                 </thead>
                 <tbody>
-                  {files.map((file) => (
+                  {sortedFiles.map((file) => (
                     <tr
                       id={`file-${file.id}`}
                       key={file.id}
@@ -765,15 +893,15 @@ export default async function SharedFilesPage({
                                     <input type="hidden" name="fileId" value={file.id} />
                                     <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                                     <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                    <button
-                                      type="submit"
-                                      style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
-                                    >
-                                      彻底删除
-                                    </button>
-                                  </form>
-                                )}
-                              </div>
+                                  <ConfirmSubmitButton
+                                    confirmMessage={`确定要彻底删除文件“${file.title}”吗？这个操作会连同存储中的文件一起移除，无法恢复。`}
+                                    style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
+                                  >
+                                    彻底删除
+                                  </ConfirmSubmitButton>
+                                </form>
+                              )}
+                            </div>
                             </details>
                           </div>
                         </td>
@@ -867,8 +995,8 @@ export default async function SharedFilesPage({
                   <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                   <input type="hidden" name="returnFolderId" value={currentFolderRecord.parentId || ""} />
                   <input type="hidden" name="focusId" value="file-list" />
-                  <button
-                    type="submit"
+                  <ConfirmSubmitButton
+                    confirmMessage={`确定要删除当前文件夹“${currentFolderRecord.name}”吗？`}
                     disabled={!currentFolderIsEmpty}
                     style={{
                       width: "100%",
@@ -881,7 +1009,7 @@ export default async function SharedFilesPage({
                     }}
                   >
                     {currentFolderIsEmpty ? "删除当前空文件夹" : "当前文件夹还有内容"}
-                  </button>
+                  </ConfirmSubmitButton>
                   <div style={{ marginTop: 8, color: currentFolderIsEmpty ? "#166534" : "#6b7280", fontSize: 12, lineHeight: 1.5 }}>
                     {currentFolderDeleteHint}
                   </div>
