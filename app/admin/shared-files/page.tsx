@@ -1,149 +1,13 @@
 import Link from "next/link";
 import { EmployeeRole, SharedFileStatus } from "@prisma/client";
-import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { ensureDefaultFileCategories } from "@/lib/bootstrap";
-import { requireAdminEmployee, requireEmployee } from "@/lib/auth";
-import { storeSharedFile } from "@/lib/shared-file-storage";
+import { requireEmployee } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
 
 function text(value: FormDataEntryValue | null | undefined) {
   return String(value ?? "").trim();
-}
-
-function enc(value: string) {
-  return encodeURIComponent(value);
-}
-
-async function addCategoryAction(formData: FormData) {
-  "use server";
-
-  await requireAdminEmployee();
-  const name = text(formData.get("name")).slice(0, 40);
-  if (!name) {
-    redirect("/admin/shared-files?err=分类名称不能为空");
-  }
-
-  try {
-    await prisma.fileCategory.create({
-      data: { name, sortOrder: 100 },
-    });
-  } catch {
-    redirect("/admin/shared-files?err=分类已存在");
-  }
-
-  revalidatePath("/admin/shared-files");
-  redirect("/admin/shared-files?msg=category-created");
-}
-
-async function uploadFileAction(formData: FormData) {
-  "use server";
-
-  const employee = await requireAdminEmployee();
-  await ensureDefaultFileCategories();
-
-  const categoryId = text(formData.get("categoryId"));
-  const remarks = text(formData.get("remarks")).slice(0, 500);
-  const titleInput = text(formData.get("title")).slice(0, 120);
-  const file = formData.get("file");
-
-  if (!categoryId) {
-    redirect("/admin/shared-files?err=请选择分类");
-  }
-  if (!(file instanceof File) || !file.size) {
-    redirect("/admin/shared-files?err=请选择要上传的文件");
-  }
-
-  const category = await prisma.fileCategory.findFirst({
-    where: { id: categoryId, isActive: true },
-  });
-  if (!category) {
-    redirect("/admin/shared-files?err=分类不存在");
-  }
-
-  let stored;
-  try {
-    stored = await storeSharedFile(file, category.name);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "文件上传失败";
-    redirect(`/admin/shared-files?err=${enc(message)}`);
-  }
-
-  const title = titleInput || stored.originalName;
-
-  await prisma.$transaction(async (tx) => {
-    const created = await tx.sharedFile.create({
-      data: {
-        title,
-        categoryId,
-        filePath: stored.filePath,
-        originalFileName: stored.originalName,
-        mimeType: stored.mimeType,
-        fileSizeBytes: stored.sizeBytes,
-        remarks: remarks || null,
-        uploadedById: employee.id,
-      },
-    });
-
-    await tx.sharedFileAudit.create({
-      data: {
-        fileId: created.id,
-        actorId: employee.id,
-        action: "UPLOAD",
-        note: remarks || null,
-      },
-    });
-  });
-
-  revalidatePath("/admin/shared-files");
-  redirect("/admin/shared-files?msg=uploaded");
-}
-
-async function changeFileStatusAction(formData: FormData) {
-  "use server";
-
-  const employee = await requireAdminEmployee();
-  const fileId = text(formData.get("fileId"));
-  const nextStatus = text(formData.get("nextStatus")).toUpperCase();
-
-  if (!fileId || !Object.values(SharedFileStatus).includes(nextStatus as SharedFileStatus)) {
-    redirect("/admin/shared-files?err=无效操作");
-  }
-
-  const row = await prisma.sharedFile.findUnique({
-    where: { id: fileId },
-    select: { id: true, status: true, title: true },
-  });
-  if (!row) {
-    redirect("/admin/shared-files?err=文件不存在");
-  }
-
-  await prisma.$transaction(async (tx) => {
-    await tx.sharedFile.update({
-      where: { id: fileId },
-      data: {
-        status: nextStatus as SharedFileStatus,
-        archivedAt: nextStatus === SharedFileStatus.ARCHIVED ? new Date() : null,
-        archivedByEmail:
-          nextStatus === SharedFileStatus.ARCHIVED || nextStatus === SharedFileStatus.DELETED
-            ? employee.email
-            : null,
-      },
-    });
-    await tx.sharedFileAudit.create({
-      data: {
-        fileId,
-        actorId: employee.id,
-        action: `STATUS_${nextStatus}`,
-        note: row.title,
-      },
-    });
-  });
-
-  revalidatePath("/admin/shared-files");
-  redirect(`/admin/shared-files?msg=${enc(`status-${nextStatus.toLowerCase()}`)}`);
 }
 
 function formatBytes(size: number) {
@@ -397,7 +261,7 @@ export default async function SharedFilesPage({
                       <td style={{ padding: "14px 8px" }}>
                         <div style={{ display: "grid", gap: 8 }}>
                           {file.status !== SharedFileStatus.ARCHIVED ? (
-                            <form action={changeFileStatusAction}>
+                            <form action="/admin/shared-files/status" method="post">
                               <input type="hidden" name="fileId" value={file.id} />
                               <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
                               <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
@@ -405,7 +269,7 @@ export default async function SharedFilesPage({
                               </button>
                             </form>
                           ) : (
-                            <form action={changeFileStatusAction}>
+                            <form action="/admin/shared-files/status" method="post">
                               <input type="hidden" name="fileId" value={file.id} />
                               <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
                               <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
@@ -414,7 +278,7 @@ export default async function SharedFilesPage({
                             </form>
                           )}
                           {file.status !== SharedFileStatus.DELETED ? (
-                            <form action={changeFileStatusAction}>
+                            <form action="/admin/shared-files/status" method="post">
                               <input type="hidden" name="fileId" value={file.id} />
                               <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
                               <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #fecaca", color: "#991b1b", background: "#fff5f5" }}>
@@ -452,7 +316,7 @@ export default async function SharedFilesPage({
               }}
             >
               <h2 style={{ margin: 0 }}>上传共享文件</h2>
-              <form action={uploadFileAction} encType="multipart/form-data" style={{ display: "grid", gap: 12 }}>
+              <form action="/admin/shared-files/upload" method="post" encType="multipart/form-data" style={{ display: "grid", gap: 12 }}>
                 <label style={{ display: "grid", gap: 6 }}>
                   <span>文件标题</span>
                   <input name="title" placeholder="不填则使用原文件名" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
@@ -493,7 +357,7 @@ export default async function SharedFilesPage({
               }}
             >
               <h2 style={{ margin: 0 }}>新增分类</h2>
-              <form action={addCategoryAction} style={{ display: "grid", gap: 12 }}>
+              <form action="/admin/shared-files/category" method="post" style={{ display: "grid", gap: 12 }}>
                 <input name="name" placeholder="例如 Legal / Sales / Delivery" required style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
                 <button type="submit" style={{ borderRadius: 999, border: 0, background: "#111827", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
                   创建分类

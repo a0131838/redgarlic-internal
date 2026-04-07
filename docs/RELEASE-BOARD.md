@@ -15,6 +15,7 @@
   - COS switch instructions are documented for server deployment
   - homepage and admin login now display the Macrocosm logo branding asset
   - shared file uploads now allow larger request bodies instead of failing near the default 1 MB action limit
+  - shared file actions now submit through stable POST endpoints instead of deploy-sensitive server action ids
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

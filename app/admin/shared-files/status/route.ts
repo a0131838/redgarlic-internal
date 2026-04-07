@@ -1,0 +1,29 @@
+import { revalidatePath } from "next/cache";
+import { NextResponse } from "next/server";
+import {
+  redirectUrl,
+  requireManagerForRoute,
+  updateSharedFileStatusFromForm,
+} from "../_lib";
+
+export async function POST(request: Request) {
+  const auth = await requireManagerForRoute(request.url);
+  if (!("employee" in auth)) {
+    return NextResponse.redirect(auth.redirectTo);
+  }
+
+  const formData = await request.formData();
+  const result = await updateSharedFileStatusFromForm(formData, {
+    id: auth.employee.id,
+    email: auth.employee.email,
+  });
+  revalidatePath("/admin/shared-files");
+
+  if (!("successQuery" in result)) {
+    return NextResponse.redirect(
+      redirectUrl(request.url, `/admin/shared-files?err=${encodeURIComponent(result.error)}`),
+    );
+  }
+
+  return NextResponse.redirect(redirectUrl(request.url, `/admin/shared-files?${result.successQuery}`));
+}
