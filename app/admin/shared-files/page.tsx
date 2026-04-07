@@ -170,6 +170,110 @@ function StatusPill({ status }: { status: SharedFileStatus }) {
   return <MetaChip label="待彻底删除" tone="amber" />;
 }
 
+function ToolLink({
+  href,
+  label,
+  tone = "slate",
+}: {
+  href: string;
+  label: string;
+  tone?: "slate" | "blue" | "amber";
+}) {
+  const palette =
+    tone === "blue"
+      ? { background: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" }
+      : tone === "amber"
+        ? { background: "#fff7ed", color: "#9a3412", border: "#fed7aa" }
+        : { background: "#ffffff", color: "#334155", border: "#e2e8f0" };
+
+  return (
+    <a
+      href={href}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "8px 12px",
+        borderRadius: 12,
+        border: `1px solid ${palette.border}`,
+        background: palette.background,
+        color: palette.color,
+        textDecoration: "none",
+        fontSize: 13,
+        fontWeight: 700,
+      }}
+    >
+      {label}
+    </a>
+  );
+}
+
+function ActionDisclosure({
+  label = "更多操作",
+  children,
+}: {
+  label?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details
+      style={{
+        border: "1px solid #e5e7eb",
+        borderRadius: 12,
+        background: "#f8fafc",
+        padding: "8px 10px",
+      }}
+    >
+      <summary
+        style={{
+          cursor: "pointer",
+          fontWeight: 700,
+          color: "#334155",
+          listStyle: "none",
+        }}
+      >
+        {label}
+      </summary>
+      <div style={{ display: "grid", gap: 8, marginTop: 10 }}>{children}</div>
+    </details>
+  );
+}
+
+function RailSection({
+  id,
+  title,
+  description,
+  children,
+}: {
+  id?: string;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      style={{
+        borderRadius: 20,
+        border: "1px solid #e5e7eb",
+        background: "#fff",
+        padding: 20,
+        display: "grid",
+        gap: 14,
+        boxShadow: "0 10px 24px rgba(15, 23, 42, 0.04)",
+      }}
+    >
+      <div>
+        <h2 style={{ margin: 0 }}>{title}</h2>
+        {description ? (
+          <div style={{ marginTop: 8, color: "#6b7280", fontSize: 13 }}>{description}</div>
+        ) : null}
+      </div>
+      {children}
+    </section>
+  );
+}
+
 function ExplorerStateHiddenFields({
   redirectFolderId,
   q,
@@ -875,25 +979,7 @@ export default async function SharedFilesPage({
                               重命名
                             </button>
                           </form>
-                          <details
-                            style={{
-                              border: "1px solid #e5e7eb",
-                              borderRadius: 12,
-                              background: "#f8fafc",
-                              padding: "8px 10px",
-                            }}
-                          >
-                            <summary
-                              style={{
-                                cursor: "pointer",
-                                fontWeight: 700,
-                                color: "#334155",
-                                listStyle: "none",
-                              }}
-                            >
-                              更多操作
-                            </summary>
-                            <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                          <ActionDisclosure>
                               <form action="/admin/shared-files/folder-move" method="post" style={{ display: "grid", gap: 8 }}>
                                 <input type="hidden" name="folderId" value={folder.id} />
                                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
@@ -955,8 +1041,7 @@ export default async function SharedFilesPage({
                                   {folderDeleteHint}
                                 </div>
                               </form>
-                            </div>
-                          </details>
+                          </ActionDisclosure>
                         </div>
                       ) : null}
                     </div>
@@ -1195,25 +1280,8 @@ export default async function SharedFilesPage({
                                 移动
                               </button>
                             </form>
-                            <details
-                              style={{
-                                border: "1px solid #e5e7eb",
-                                borderRadius: 12,
-                                background: "#f8fafc",
-                                padding: "8px 10px",
-                              }}
-                            >
-                              <summary
-                                style={{
-                                  cursor: "pointer",
-                                  fontWeight: 700,
-                                  color: "#334155",
-                                  listStyle: "none",
-                                }}
-                              >
-                                更多操作
-                              </summary>
-                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                            <ActionDisclosure>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                                 {file.status !== SharedFileStatus.ARCHIVED ? (
                                   <form action="/admin/shared-files/status" method="post">
                                     <input type="hidden" name="fileId" value={file.id} />
@@ -1290,8 +1358,8 @@ export default async function SharedFilesPage({
                                   </ConfirmSubmitButton>
                                 </form>
                               )}
-                            </div>
-                            </details>
+                              </div>
+                            </ActionDisclosure>
                           </div>
                         </td>
                       ) : null}
@@ -1312,6 +1380,17 @@ export default async function SharedFilesPage({
 
         {isManager ? (
           <div style={{ display: "grid", gap: 16, alignContent: "start", alignSelf: "start", position: "sticky", top: 20 }}>
+            <RailSection
+              title="快速工具"
+              description="把右侧常用管理动作收成一个固定工具带，切目录时也能快速跳转。"
+            >
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {currentFolderRecord ? <ToolLink href="#current-folder-admin" label="当前文件夹" tone="blue" /> : null}
+                <ToolLink href="#upload-panel" label="上传文件" tone="blue" />
+                <ToolLink href="#folder-form" label="新建文件夹" />
+                <ToolLink href="#category-form" label="新增分类" tone="amber" />
+              </div>
+            </RailSection>
             {currentFolderRecord ? (
               (() => {
                 const currentFolderIsEmpty =
@@ -1320,23 +1399,11 @@ export default async function SharedFilesPage({
                   ? "当前文件夹为空，可以直接删除。"
                   : `当前文件夹下还有 ${currentFolderRecord._count.children} 个子文件夹、${currentFolderRecord._count.files} 个文件。`;
                 return (
-              <section
+              <RailSection
                 id="current-folder-admin"
-                style={{
-                  borderRadius: 20,
-                  border: "1px solid #e5e7eb",
-                  background: "#fff",
-                  padding: 20,
-                  display: "grid",
-                  gap: 14,
-                }}
+                title="当前文件夹管理"
+                description="可重命名、移动当前目录；只有空文件夹才能删除。"
               >
-                <div>
-                  <h2 style={{ margin: 0 }}>当前文件夹管理</h2>
-                  <div style={{ marginTop: 8, color: "#6b7280", fontSize: 13 }}>
-                    可重命名、移动当前目录；只有空文件夹才能删除。
-                  </div>
-                </div>
                 <form action="/admin/shared-files/folder-rename" method="post" style={{ display: "grid", gap: 12 }}>
                   <input type="hidden" name="folderId" value={currentFolderRecord.id} />
                   <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
@@ -1427,27 +1494,15 @@ export default async function SharedFilesPage({
                     {currentFolderDeleteHint}
                   </div>
                 </form>
-              </section>
+              </RailSection>
                 );
               })()
             ) : null}
-            <section
-              style={{
-                borderRadius: 20,
-                border: "1px solid #e5e7eb",
-                background: "#fff",
-                padding: 20,
-                display: "grid",
-                gap: 14,
-              }}
+            <RailSection
+              id="upload-panel"
+              title="上传到当前目录"
+              description={`目标位置：${activeCategory?.name || "未选择分类"}${validFolderLineage.map((folder) => ` / ${folder.name}`).join("")}`}
             >
-              <div>
-                <h2 style={{ margin: 0 }}>上传到当前目录</h2>
-                <div style={{ marginTop: 8, color: "#6b7280", fontSize: 13 }}>
-                  目标位置：{activeCategory?.name || "未选择分类"}
-                  {validFolderLineage.map((folder) => ` / ${folder.name}`).join("")}
-                </div>
-              </div>
               <form action="/admin/shared-files/upload" method="post" encType="multipart/form-data" style={{ display: "grid", gap: 12 }}>
                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                 <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
@@ -1475,25 +1530,13 @@ export default async function SharedFilesPage({
                   上传文件
                 </button>
               </form>
-            </section>
+            </RailSection>
 
-            <section
+            <RailSection
               id="folder-form"
-              style={{
-                borderRadius: 20,
-                border: "1px solid #e5e7eb",
-                background: "#fff",
-                padding: 20,
-                display: "grid",
-                gap: 14,
-              }}
+              title="新建文件夹"
+              description="在当前目录下面创建新的子文件夹。"
             >
-              <div>
-                <h2 style={{ margin: 0 }}>新建文件夹</h2>
-                <div style={{ marginTop: 8, color: "#6b7280", fontSize: 13 }}>
-                  在当前目录下面创建新的子文件夹
-                </div>
-              </div>
               <form action="/admin/shared-files/folder" method="post" style={{ display: "grid", gap: 12 }}>
                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                 <input type="hidden" name="parentId" value={currentFolder?.id || ""} />
@@ -1510,20 +1553,13 @@ export default async function SharedFilesPage({
                   创建文件夹
                 </button>
               </form>
-            </section>
+            </RailSection>
 
-            <section
+            <RailSection
               id="category-form"
-              style={{
-                borderRadius: 20,
-                border: "1px solid #e5e7eb",
-                background: "#fff",
-                padding: 20,
-                display: "grid",
-                gap: 14,
-              }}
+              title="新增分类"
+              description="给共享文件库补充新的一级分类。"
             >
-              <h2 style={{ margin: 0 }}>新增分类</h2>
               <form action="/admin/shared-files/category" method="post" style={{ display: "grid", gap: 12 }}>
                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                 <ExplorerStateHiddenFields
@@ -1539,7 +1575,7 @@ export default async function SharedFilesPage({
                   创建分类
                 </button>
               </form>
-            </section>
+            </RailSection>
           </div>
         ) : null}
       </section>

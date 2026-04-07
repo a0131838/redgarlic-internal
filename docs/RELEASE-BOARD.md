@@ -43,6 +43,7 @@
   - explorer actions now keep the active search, sort, and density context instead of resetting the view after each mutation
   - the explorer now behaves more like a desktop list view with clickable sort headers, visible active-sort chips, and clearer archived/deleted state styling
   - bulk selection now feels closer to a desktop file manager with quick-select helpers, invert selection, and clearer current-state chips and filter reset
+  - the explorer now uses a more unified management layout with shared action disclosures and a right-side quick-tool strip for common admin actions
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates
