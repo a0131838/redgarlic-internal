@@ -14,3 +14,4 @@
 - moved shared-file create/update forms to stable POST routes so old tabs do not break after a deploy
 - added a permanent delete flow that removes already-marked files from both storage and the database
 - fixed the shared-file two-column layout so the right-side forms no longer stretch when the file list gets long
+- widened the shared-file desktop layout so the left table can show management actions without squeezing behind the upload rail

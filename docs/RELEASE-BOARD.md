@@ -18,6 +18,7 @@
   - shared file actions now submit through stable POST endpoints instead of deploy-sensitive server action ids
   - deleted files can now be permanently removed from storage and the database after a soft delete
   - the right-side upload and category cards keep their own height even when the left file table becomes very long
+  - the desktop split now prioritizes the file table width while keeping the upload rail fixed and sticky
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

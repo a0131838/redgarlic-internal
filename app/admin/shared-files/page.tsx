@@ -91,7 +91,7 @@ export default async function SharedFilesPage({
   ]);
 
   return (
-    <main style={{ maxWidth: 1180, margin: "0 auto", padding: 28, display: "grid", gap: 18 }}>
+    <main style={{ maxWidth: 1440, margin: "0 auto", padding: 28, display: "grid", gap: 18 }}>
       <section
         style={{
           display: "flex",
@@ -155,7 +155,7 @@ export default async function SharedFilesPage({
         style={{
           display: "grid",
           gap: 18,
-          gridTemplateColumns: isManager ? "minmax(0, 1.2fr) minmax(320px, 0.8fr)" : "1fr",
+          gridTemplateColumns: isManager ? "minmax(0, 1fr) 360px" : "1fr",
           alignItems: "start",
         }}
       >
@@ -210,8 +210,8 @@ export default async function SharedFilesPage({
             </div>
           </form>
 
-          <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
+          <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
               <thead>
                 <tr style={{ textAlign: "left", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>
                   <th style={{ padding: "12px 8px" }}>文件</th>
@@ -315,7 +315,7 @@ export default async function SharedFilesPage({
         </div>
 
         {isManager ? (
-          <div style={{ display: "grid", gap: 16, alignContent: "start", alignSelf: "start" }}>
+          <div style={{ display: "grid", gap: 16, alignContent: "start", alignSelf: "start", position: "sticky", top: 20 }}>
             <section
               style={{
                 borderRadius: 20,

@@ -21,3 +21,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - move the shared-file mutation forms to route handlers so already-open tabs remain usable across deployments
 - require a two-step deletion flow: mark a file deleted first, then allow permanent removal from storage and the database
 - keep the shared-file right rail top-aligned so long file tables do not distort the upload and category cards
+- favor a wider left document table on desktop so admins can always reach operation buttons without awkward clipping
