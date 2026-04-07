@@ -14,6 +14,7 @@
   - shared files can now be stored with `local` or `s3` driver via env configuration
   - COS switch instructions are documented for server deployment
   - homepage and admin login now display the Macrocosm logo branding asset
+  - shared file uploads now allow larger request bodies instead of failing near the default 1 MB action limit
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

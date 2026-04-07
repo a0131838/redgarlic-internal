@@ -10,3 +10,4 @@
 - added shared file storage abstraction with local/COS(S3) support and controlled access route
 - documented Tencent COS deployment configuration for future storage switch
 - refreshed the public and admin entry branding with the Macrocosm logo asset
+- raised the Next.js server action body limit to prevent shared-file uploads from failing at 1 MB

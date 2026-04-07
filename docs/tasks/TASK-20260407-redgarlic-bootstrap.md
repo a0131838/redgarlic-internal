@@ -17,3 +17,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - use Neon PostgreSQL instead of Tencent Cloud LighthouseDB
 - reserve object storage for shared file content in the next implementation phase
 - use local `public/uploads/shared-files` storage for the first closed-loop MVP so the app can go live before COS integration
+- raise the Next.js server action body limit so file uploads do not break once real documents exceed the default 1 MB cap
