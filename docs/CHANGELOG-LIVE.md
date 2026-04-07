@@ -35,3 +35,4 @@
 - moved per-file secondary actions into a compact “more actions” disclosure so the explorer keeps a cleaner desktop-style rhythm
 - translated internal success codes into human-readable Chinese feedback and moved folder-card secondary actions into the same “more actions” pattern as file rows
 - added folder/file sort selectors, clearer current-path navigation, and confirmation prompts for destructive explorer actions as the first bundled desktop-style polish pass
+- added a second explorer polish pass with comfortable/compact density modes, current-page select-all tools, and live selected-count feedback for bulk actions

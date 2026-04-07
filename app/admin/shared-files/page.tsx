@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureDefaultFileCategories } from "@/lib/bootstrap";
 import { requireEmployee } from "@/lib/auth";
 import { getFolderLineage } from "./_lib";
-import { BulkActionSubmitButton, ConfirmSubmitButton } from "./confirm-submit-button";
+import { BulkActionSubmitButton, BulkSelectionToolbar, ConfirmSubmitButton } from "./confirm-submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -42,9 +42,11 @@ type FolderListItem = {
 
 type FolderSort = "name-asc" | "name-desc" | "newest" | "oldest";
 type FileSort = "newest" | "oldest" | "name-asc" | "name-desc" | "size-desc" | "size-asc";
+type ViewMode = "comfortable" | "compact";
 
 const DEFAULT_FOLDER_SORT: FolderSort = "name-asc";
 const DEFAULT_FILE_SORT: FileSort = "newest";
+const DEFAULT_VIEW_MODE: ViewMode = "comfortable";
 
 const folderSortOptions: Array<{ value: FolderSort; label: string }> = [
   { value: "name-asc", label: "文件夹名 A-Z" },
@@ -60,6 +62,11 @@ const fileSortOptions: Array<{ value: FileSort; label: string }> = [
   { value: "name-desc", label: "文件名 Z-A" },
   { value: "size-desc", label: "文件最大" },
   { value: "size-asc", label: "文件最小" },
+];
+
+const viewModeOptions: Array<{ value: ViewMode; label: string }> = [
+  { value: "comfortable", label: "舒适视图" },
+  { value: "compact", label: "紧凑视图" },
 ];
 
 function buildFolderOptions(
@@ -113,6 +120,7 @@ function buildHref(params: {
   status?: string;
   folderSort?: string;
   fileSort?: string;
+  viewMode?: string;
   msg?: string;
   err?: string;
 }) {
@@ -123,6 +131,7 @@ function buildHref(params: {
   if (params.status) search.set("status", params.status);
   if (params.folderSort) search.set("folderSort", params.folderSort);
   if (params.fileSort) search.set("fileSort", params.fileSort);
+  if (params.viewMode) search.set("viewMode", params.viewMode);
   if (params.msg) search.set("msg", params.msg);
   if (params.err) search.set("err", params.err);
   const qs = search.toString();
@@ -139,6 +148,12 @@ function parseFileSort(value: string): FileSort {
   return fileSortOptions.some((option) => option.value === value)
     ? (value as FileSort)
     : DEFAULT_FILE_SORT;
+}
+
+function parseViewMode(value: string): ViewMode {
+  return viewModeOptions.some((option) => option.value === value)
+    ? (value as ViewMode)
+    : DEFAULT_VIEW_MODE;
 }
 
 function compareText(a: string, b: string) {
@@ -216,6 +231,7 @@ export default async function SharedFilesPage({
     status?: string;
     folderSort?: string;
     fileSort?: string;
+    viewMode?: string;
     msg?: string;
     err?: string;
   }>;
@@ -232,6 +248,7 @@ export default async function SharedFilesPage({
   const status = text(sp?.status).toUpperCase();
   const folderSort = parseFolderSort(text(sp?.folderSort));
   const fileSort = parseFileSort(text(sp?.fileSort));
+  const viewMode = parseViewMode(text(sp?.viewMode));
 
   const categories = await prisma.fileCategory.findMany({
     where: { isActive: true },
@@ -324,6 +341,7 @@ export default async function SharedFilesPage({
     status,
     folderSort,
     fileSort,
+    viewMode,
   });
   const feedbackMessage = humanizeFeedbackMessage(text(sp?.msg));
   const parentFolder = currentFolderRecord?.parentId ? folderMap.get(currentFolderRecord.parentId) || null : null;
@@ -335,8 +353,14 @@ export default async function SharedFilesPage({
         status,
         folderSort,
         fileSort,
+        viewMode,
       })
     : rootHref;
+  const isCompact = viewMode === "compact";
+  const rowPadding = isCompact ? "10px 8px" : "14px 8px";
+  const folderGridTemplate = isCompact
+    ? "repeat(auto-fit, minmax(180px, 1fr))"
+    : "repeat(auto-fit, minmax(220px, 1fr))";
 
   return (
     <main style={{ maxWidth: 1440, margin: "0 auto", padding: 28, display: "grid", gap: 18 }}>
@@ -492,6 +516,17 @@ export default async function SharedFilesPage({
                 ))}
               </select>
             </div>
+            <select
+              name="viewMode"
+              defaultValue={viewMode}
+              style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+            >
+              {viewModeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             {currentFolder ? <input type="hidden" name="folderId" value={currentFolder.id} /> : null}
           </form>
 
@@ -555,7 +590,7 @@ export default async function SharedFilesPage({
                 style={{
                   display: "grid",
                   gap: 14,
-                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gridTemplateColumns: folderGridTemplate,
                 }}
               >
                 {folders.map((folder) => {
@@ -573,7 +608,7 @@ export default async function SharedFilesPage({
                         borderRadius: 18,
                         border: "1px solid #e5e7eb",
                         background: "linear-gradient(180deg, #fff7ed, #ffffff)",
-                        padding: 18,
+                        padding: isCompact ? 14 : 18,
                         color: "#111827",
                         scrollMarginTop: 24,
                       }}
@@ -582,12 +617,16 @@ export default async function SharedFilesPage({
                         href={buildHref({
                           categoryId: activeCategory?.id,
                           folderId: folder.id,
+                          q,
                           status,
+                          folderSort,
+                          fileSort,
+                          viewMode,
                         })}
                         style={{ display: "grid", gap: 8, textDecoration: "none", color: "#111827" }}
                       >
                         <div style={{ fontSize: 28 }}>📁</div>
-                        <div style={{ fontWeight: 700, fontSize: 16 }}>{folder.name}</div>
+                        <div style={{ fontWeight: 700, fontSize: isCompact ? 15 : 16 }}>{folder.name}</div>
                         <div style={{ color: "#6b7280", fontSize: 13 }}>
                           {folder._count.children} 个子文件夹 · {folder._count.files} 个文件
                         </div>
@@ -709,6 +748,7 @@ export default async function SharedFilesPage({
               >
                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                 <div style={{ fontWeight: 700, color: "#1e3a8a" }}>批量整理当前目录文件</div>
+                <BulkSelectionToolbar />
                 <div style={{ display: "grid", gap: 10, gridTemplateColumns: "180px minmax(0, 1fr) auto", alignItems: "center" }}>
                   <select
                     name="bulkAction"
@@ -760,19 +800,20 @@ export default async function SharedFilesPage({
                       style={{ borderBottom: "1px solid #f1f5f9", verticalAlign: "top", scrollMarginTop: 24 }}
                     >
                       {isManager ? (
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: rowPadding }}>
                           <input
                             type="checkbox"
                             name="fileIds"
                             value={file.id}
                             form="bulk-file-move-form"
                             disabled={file.status === SharedFileStatus.DELETED}
+                            className="bulk-file-checkbox"
                             aria-label={`选择文件 ${file.title}`}
                           />
                         </td>
                       ) : null}
-                      <td style={{ padding: "14px 8px" }}>
-                        <div style={{ fontWeight: 700 }}>{file.title}</div>
+                      <td style={{ padding: rowPadding }}>
+                        <div style={{ fontWeight: 700, fontSize: isCompact ? 14 : 16 }}>{file.title}</div>
                         <div style={{ color: "#6b7280", fontSize: 13 }}>{file.originalFileName}</div>
                         {file.remarks ? <div style={{ marginTop: 6, color: "#4b5563", fontSize: 13 }}>{file.remarks}</div> : null}
                         <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
@@ -782,15 +823,15 @@ export default async function SharedFilesPage({
                           <a href={`/api/admin/shared-files/${file.id}?download=1`}>下载</a>
                         </div>
                       </td>
-                      <td style={{ padding: "14px 8px" }}>{file.status}</td>
-                      <td style={{ padding: "14px 8px" }}>
+                      <td style={{ padding: rowPadding }}>{file.status}</td>
+                      <td style={{ padding: rowPadding }}>
                         <div>{file.uploader.name}</div>
                         <div style={{ color: "#6b7280", fontSize: 13 }}>{file.uploader.email}</div>
                       </td>
-                      <td style={{ padding: "14px 8px" }}>{formatBytes(file.fileSizeBytes)}</td>
-                      <td style={{ padding: "14px 8px", color: "#4b5563", fontSize: 13 }}>{formatTime(file.createdAt)}</td>
+                      <td style={{ padding: rowPadding }}>{formatBytes(file.fileSizeBytes)}</td>
+                      <td style={{ padding: rowPadding, color: "#4b5563", fontSize: 13 }}>{formatTime(file.createdAt)}</td>
                       {isManager ? (
-                        <td style={{ padding: "14px 8px" }}>
+                        <td style={{ padding: rowPadding }}>
                           <div style={{ display: "grid", gap: 10, minWidth: 280 }}>
                             <form
                               action="/admin/shared-files/rename"

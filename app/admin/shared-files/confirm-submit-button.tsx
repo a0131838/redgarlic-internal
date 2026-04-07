@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
+
 type ConfirmSubmitButtonProps = {
   children: React.ReactNode;
   confirmMessage: string;
@@ -61,5 +63,65 @@ export function BulkActionSubmitButton({
     >
       执行批量操作
     </button>
+  );
+}
+
+export function BulkSelectionToolbar({
+  checkboxName = "fileIds",
+}: {
+  checkboxName?: string;
+}) {
+  const selector = useMemo(
+    () => `input[type="checkbox"][name="${checkboxName}"][form="bulk-file-move-form"]`,
+    [checkboxName],
+  );
+  const [selectedCount, setSelectedCount] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+
+  useEffect(() => {
+    const syncCounts = () => {
+      const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(selector));
+      setTotalCount(inputs.length);
+      setSelectedCount(inputs.filter((input) => input.checked).length);
+    };
+
+    syncCounts();
+    document.addEventListener("change", syncCounts);
+    return () => document.removeEventListener("change", syncCounts);
+  }, [selector]);
+
+  const setAll = (checked: boolean) => {
+    const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(selector));
+    for (const input of inputs) {
+      if (!input.disabled) {
+        input.checked = checked;
+      }
+    }
+    setSelectedCount(
+      checked ? inputs.filter((input) => !input.disabled).length : 0,
+    );
+    setTotalCount(inputs.length);
+  };
+
+  return (
+    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      <button
+        type="button"
+        onClick={() => setAll(true)}
+        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #bfdbfe", background: "#fff", color: "#1d4ed8" }}
+      >
+        全选当前页
+      </button>
+      <button
+        type="button"
+        onClick={() => setAll(false)}
+        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #d1d5db", background: "#fff", color: "#475569" }}
+      >
+        清空选择
+      </button>
+      <div style={{ color: "#475569", fontSize: 13 }}>
+        已选 {selectedCount} / {totalCount}
+      </div>
+    </div>
   );
 }

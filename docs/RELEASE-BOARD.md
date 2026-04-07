@@ -39,6 +39,7 @@
   - per-file archive/delete actions now live under a compact “more actions” disclosure to reduce button clutter in the table
   - success banners now read as plain Chinese status messages, and folder cards now tuck move/delete into a matching “more actions” disclosure
   - the explorer now supports independent folder/file sort modes, clearer “up one level” path navigation, and confirm dialogs for destructive file/folder actions
+  - the explorer now offers comfortable/compact density modes plus current-page select-all and selected-count feedback in the batch toolbar
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates
