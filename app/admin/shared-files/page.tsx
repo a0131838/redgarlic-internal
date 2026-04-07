@@ -27,6 +27,38 @@ function formatTime(date: Date) {
   }).format(date);
 }
 
+type FolderListItem = {
+  id: string;
+  name: string;
+  categoryId: string;
+  parentId: string | null;
+  _count: {
+    children: number;
+    files: number;
+  };
+};
+
+function buildFolderOptions(
+  folders: FolderListItem[],
+  parentId: string | null = null,
+  depth = 0,
+  acc: Array<{ value: string; label: string }> = [],
+) {
+  const siblings = folders
+    .filter((folder) => folder.parentId === parentId)
+    .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+
+  for (const folder of siblings) {
+    acc.push({
+      value: folder.id,
+      label: `${"　".repeat(depth)}${depth > 0 ? "└ " : ""}${folder.name}`,
+    });
+    buildFolderOptions(folders, folder.id, depth + 1, acc);
+  }
+
+  return acc;
+}
+
 function buildHref(params: {
   categoryId?: string;
   folderId?: string;
@@ -113,12 +145,19 @@ export default async function SharedFilesPage({
     ];
   }
 
-  const [folders, files] = activeCategory
+  const [allFolders, files] = activeCategory
     ? await Promise.all([
         prisma.sharedFolder.findMany({
           where: {
             categoryId: activeCategory.id,
-            parentId: currentFolder?.id || null,
+          },
+          include: {
+            _count: {
+              select: {
+                children: true,
+                files: true,
+              },
+            },
           },
           orderBy: [{ name: "asc" }],
         }),
@@ -133,6 +172,12 @@ export default async function SharedFilesPage({
         }),
       ])
     : [[], []];
+
+  const folderMap = new Map(allFolders.map((folder) => [folder.id, folder]));
+  const currentFolderRecord = currentFolder ? folderMap.get(currentFolder.id) || null : null;
+  const folders = allFolders.filter((folder) => folder.parentId === (currentFolderRecord?.id || null));
+  const folderOptions = buildFolderOptions(allFolders);
+  const moveTargetOptions = [{ value: "", label: "根目录" }, ...folderOptions];
 
   const rootHref = buildHref({
     categoryId: activeCategory?.id,
@@ -320,32 +365,83 @@ export default async function SharedFilesPage({
                   gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                 }}
               >
-                {folders.map((folder) => (
-                  <Link
-                    key={folder.id}
-                    id={`folder-${folder.id}`}
-                    href={buildHref({
-                      categoryId: activeCategory?.id,
-                      folderId: folder.id,
-                      status,
-                    })}
-                    style={{
-                      display: "grid",
-                      gap: 8,
-                      borderRadius: 18,
-                      border: "1px solid #e5e7eb",
-                      background: "linear-gradient(180deg, #fff7ed, #ffffff)",
-                      padding: 18,
-                      textDecoration: "none",
-                      color: "#111827",
-                      scrollMarginTop: 24,
-                    }}
-                  >
-                    <div style={{ fontSize: 28 }}>📁</div>
-                    <div style={{ fontWeight: 700, fontSize: 16 }}>{folder.name}</div>
-                    <div style={{ color: "#6b7280", fontSize: 13 }}>打开文件夹</div>
-                  </Link>
-                ))}
+                {folders.map((folder) => {
+                  const isEmptyFolder = folder._count.children === 0 && folder._count.files === 0;
+                  return (
+                    <div
+                      key={folder.id}
+                      id={`folder-${folder.id}`}
+                      style={{
+                        display: "grid",
+                        gap: 12,
+                        borderRadius: 18,
+                        border: "1px solid #e5e7eb",
+                        background: "linear-gradient(180deg, #fff7ed, #ffffff)",
+                        padding: 18,
+                        color: "#111827",
+                        scrollMarginTop: 24,
+                      }}
+                    >
+                      <Link
+                        href={buildHref({
+                          categoryId: activeCategory?.id,
+                          folderId: folder.id,
+                          status,
+                        })}
+                        style={{ display: "grid", gap: 8, textDecoration: "none", color: "#111827" }}
+                      >
+                        <div style={{ fontSize: 28 }}>📁</div>
+                        <div style={{ fontWeight: 700, fontSize: 16 }}>{folder.name}</div>
+                        <div style={{ color: "#6b7280", fontSize: 13 }}>
+                          {folder._count.children} 个子文件夹 · {folder._count.files} 个文件
+                        </div>
+                      </Link>
+                      {isManager ? (
+                        <div style={{ display: "grid", gap: 8 }}>
+                          <form action="/admin/shared-files/folder-rename" method="post" style={{ display: "grid", gap: 8 }}>
+                            <input type="hidden" name="folderId" value={folder.id} />
+                            <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                            <input type="hidden" name="returnFolderId" value={currentFolderRecord?.id || ""} />
+                            <input type="hidden" name="focusId" value={`folder-${folder.id}`} />
+                            <input
+                              name="name"
+                              defaultValue={folder.name}
+                              required
+                              style={{ padding: 8, borderRadius: 10, border: "1px solid #d1d5db" }}
+                            />
+                            <button
+                              type="submit"
+                              style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                            >
+                              重命名
+                            </button>
+                          </form>
+                          <form action="/admin/shared-files/folder-delete" method="post">
+                            <input type="hidden" name="folderId" value={folder.id} />
+                            <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                            <input type="hidden" name="returnFolderId" value={currentFolderRecord?.id || ""} />
+                            <input type="hidden" name="focusId" value="file-list" />
+                            <button
+                              type="submit"
+                              disabled={!isEmptyFolder}
+                              style={{
+                                width: "100%",
+                                padding: "8px 10px",
+                                borderRadius: 12,
+                                border: "1px solid #fecaca",
+                                background: isEmptyFolder ? "#fff5f5" : "#f8fafc",
+                                color: isEmptyFolder ? "#991b1b" : "#94a3b8",
+                                cursor: isEmptyFolder ? "pointer" : "not-allowed",
+                              }}
+                            >
+                              {isEmptyFolder ? "删除空文件夹" : "含内容，不能删除"}
+                            </button>
+                          </form>
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
               </div>
             ) : (
               <div style={{ padding: 18, borderRadius: 16, border: "1px dashed #d1d5db", color: "#6b7280" }}>
@@ -396,6 +492,27 @@ export default async function SharedFilesPage({
                       {isManager ? (
                         <td style={{ padding: "14px 8px" }}>
                           <div style={{ display: "grid", gap: 8 }}>
+                            <form action="/admin/shared-files/move" method="post" style={{ display: "grid", gap: 8 }}>
+                              <input type="hidden" name="fileId" value={file.id} />
+                              <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                              <select
+                                name="targetFolderId"
+                                defaultValue={currentFolderRecord?.id || ""}
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                              >
+                                {moveTargetOptions.map((option) => (
+                                  <option key={option.value || "root"} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="submit"
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #bfdbfe", color: "#1d4ed8", background: "#eff6ff" }}
+                              >
+                                移动文件
+                              </button>
+                            </form>
                             {file.status !== SharedFileStatus.ARCHIVED ? (
                               <form action="/admin/shared-files/status" method="post">
                                 <input type="hidden" name="fileId" value={file.id} />
@@ -460,6 +577,70 @@ export default async function SharedFilesPage({
 
         {isManager ? (
           <div style={{ display: "grid", gap: 16, alignContent: "start", alignSelf: "start", position: "sticky", top: 20 }}>
+            {currentFolderRecord ? (
+              <section
+                id="current-folder-admin"
+                style={{
+                  borderRadius: 20,
+                  border: "1px solid #e5e7eb",
+                  background: "#fff",
+                  padding: 20,
+                  display: "grid",
+                  gap: 14,
+                }}
+              >
+                <div>
+                  <h2 style={{ margin: 0 }}>当前文件夹管理</h2>
+                  <div style={{ marginTop: 8, color: "#6b7280", fontSize: 13 }}>
+                    可重命名当前目录；只有空文件夹才能删除。
+                  </div>
+                </div>
+                <form action="/admin/shared-files/folder-rename" method="post" style={{ display: "grid", gap: 12 }}>
+                  <input type="hidden" name="folderId" value={currentFolderRecord.id} />
+                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                  <input type="hidden" name="returnFolderId" value={currentFolderRecord.id} />
+                  <input type="hidden" name="focusId" value="current-folder-admin" />
+                  <label style={{ display: "grid", gap: 6 }}>
+                    <span>文件夹名称</span>
+                    <input
+                      name="name"
+                      defaultValue={currentFolderRecord.name}
+                      required
+                      style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+                    />
+                  </label>
+                  <button type="submit" style={{ borderRadius: 999, border: 0, background: "#111827", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
+                    重命名当前文件夹
+                  </button>
+                </form>
+                <form action="/admin/shared-files/folder-delete" method="post">
+                  <input type="hidden" name="folderId" value={currentFolderRecord.id} />
+                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                  <input type="hidden" name="returnFolderId" value={currentFolderRecord.parentId || ""} />
+                  <input type="hidden" name="focusId" value="file-list" />
+                  <button
+                    type="submit"
+                    disabled={currentFolderRecord._count.children > 0 || currentFolderRecord._count.files > 0}
+                    style={{
+                      width: "100%",
+                      padding: "12px 16px",
+                      borderRadius: 999,
+                      border: "1px solid #fecaca",
+                      background:
+                        currentFolderRecord._count.children === 0 && currentFolderRecord._count.files === 0 ? "#fff5f5" : "#f8fafc",
+                      color:
+                        currentFolderRecord._count.children === 0 && currentFolderRecord._count.files === 0 ? "#991b1b" : "#94a3b8",
+                      cursor:
+                        currentFolderRecord._count.children === 0 && currentFolderRecord._count.files === 0 ? "pointer" : "not-allowed",
+                    }}
+                  >
+                    {currentFolderRecord._count.children === 0 && currentFolderRecord._count.files === 0
+                      ? "删除当前空文件夹"
+                      : "当前文件夹还有内容"}
+                  </button>
+                </form>
+              </section>
+            ) : null}
             <section
               style={{
                 borderRadius: 20,

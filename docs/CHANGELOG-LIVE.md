@@ -25,3 +25,4 @@
 - rebuilt logout redirects from proxy headers so production sign-out never bounces users toward the internal `localhost` origin
 - added server-side upload size enforcement and switched shared-file writes to streaming I/O to avoid buffering a second full copy of every upload in memory
 - supplied explicit content length for COS streaming uploads so Tencent-compatible S3 endpoints accept the streamed body
+- added desktop-style folder management actions for renaming folders, deleting empty folders, and moving files between directories

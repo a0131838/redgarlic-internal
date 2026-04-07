@@ -83,6 +83,26 @@ export async function getFolderLineage(folderId: string) {
   return lineage;
 }
 
+async function getFolderRecord(folderId: string) {
+  return prisma.sharedFolder.findUnique({
+    where: { id: folderId },
+    select: {
+      id: true,
+      name: true,
+      categoryId: true,
+      parentId: true,
+    },
+  });
+}
+
+async function ensureFolderInCategory(folderId: string, categoryId: string) {
+  const lineage = await getFolderLineage(folderId);
+  if (!lineage?.length || lineage[lineage.length - 1]?.categoryId !== categoryId) {
+    return null;
+  }
+  return lineage;
+}
+
 export async function addCategoryFromForm(formData: FormData) {
   const name = text(formData.get("name")).slice(0, 40);
   if (!name) {
@@ -144,6 +164,85 @@ export async function createFolderFromForm(formData: FormData) {
   } catch {
     return { error: "同一目录下已存在同名文件夹" };
   }
+}
+
+export async function renameFolderFromForm(formData: FormData) {
+  const folderId = text(formData.get("folderId"));
+  const nextName = text(formData.get("name")).slice(0, 80);
+  const categoryId = text(formData.get("categoryId"));
+  const returnFolderId = text(formData.get("returnFolderId"));
+  const focusId = text(formData.get("focusId"));
+
+  if (!folderId || !nextName) {
+    return { error: "文件夹名称不能为空" };
+  }
+
+  const folder = await getFolderRecord(folderId);
+  if (!folder || (categoryId && folder.categoryId !== categoryId)) {
+    return { error: "文件夹不存在" };
+  }
+
+  if (folder.name === nextName) {
+    const params = new URLSearchParams();
+    params.set("categoryId", folder.categoryId);
+    if (returnFolderId) params.set("folderId", returnFolderId);
+    params.set("msg", "folder-rename-skipped");
+    return { successPath: sharedFilesPath(params.toString(), focusId || `folder-${folderId}`) };
+  }
+
+  try {
+    await prisma.sharedFolder.update({
+      where: { id: folderId },
+      data: { name: nextName },
+    });
+  } catch {
+    return { error: "同一目录下已存在同名文件夹" };
+  }
+
+  const params = new URLSearchParams();
+  params.set("categoryId", folder.categoryId);
+  if (returnFolderId) {
+    params.set("folderId", returnFolderId);
+  } else if (folderId) {
+    params.set("folderId", folderId);
+  }
+  params.set("msg", "folder-renamed");
+  return { successPath: sharedFilesPath(params.toString(), focusId || `folder-${folderId}`) };
+}
+
+export async function deleteFolderFromForm(formData: FormData) {
+  const folderId = text(formData.get("folderId"));
+  const categoryId = text(formData.get("categoryId"));
+  const returnFolderId = text(formData.get("returnFolderId"));
+  const focusId = text(formData.get("focusId"));
+
+  if (!folderId) {
+    return { error: "文件夹不存在" };
+  }
+
+  const folder = await getFolderRecord(folderId);
+  if (!folder || (categoryId && folder.categoryId !== categoryId)) {
+    return { error: "文件夹不存在" };
+  }
+
+  const [childCount, fileCount] = await Promise.all([
+    prisma.sharedFolder.count({ where: { parentId: folderId } }),
+    prisma.sharedFile.count({ where: { folderId } }),
+  ]);
+
+  if (childCount > 0 || fileCount > 0) {
+    return { error: "只能删除空文件夹" };
+  }
+
+  await prisma.sharedFolder.delete({
+    where: { id: folderId },
+  });
+
+  const params = new URLSearchParams();
+  params.set("categoryId", folder.categoryId);
+  if (returnFolderId) params.set("folderId", returnFolderId);
+  params.set("msg", "folder-deleted");
+  return { successPath: sharedFilesPath(params.toString(), focusId || "file-list") };
 }
 
 export async function uploadSharedFileFromForm(formData: FormData, actorId: string) {
@@ -333,4 +432,70 @@ export async function permanentlyDeleteSharedFileFromForm(formData: FormData, ac
   params.set("msg", "deleted-permanently");
 
   return { successPath: sharedFilesPath(params.toString(), "file-list") };
+}
+
+export async function moveSharedFileFromForm(formData: FormData, actorId: string) {
+  const fileId = text(formData.get("fileId"));
+  const categoryId = text(formData.get("categoryId"));
+  const targetFolderId = text(formData.get("targetFolderId")) || null;
+
+  if (!fileId || !categoryId) {
+    return { error: "无效操作" };
+  }
+
+  const file = await prisma.sharedFile.findUnique({
+    where: { id: fileId },
+    select: {
+      id: true,
+      title: true,
+      categoryId: true,
+      folderId: true,
+      status: true,
+    },
+  });
+  if (!file || file.categoryId !== categoryId) {
+    return { error: "文件不存在" };
+  }
+  if (file.status === SharedFileStatus.DELETED) {
+    return { error: "已删除文件不能移动" };
+  }
+
+  let targetLabel = "根目录";
+  if (targetFolderId) {
+    const lineage = await ensureFolderInCategory(targetFolderId, categoryId);
+    if (!lineage?.length) {
+      return { error: "目标目录不存在" };
+    }
+    targetLabel = lineage.map((folder) => folder.name).join(" / ");
+  }
+
+  if (file.folderId === targetFolderId) {
+    const params = new URLSearchParams();
+    params.set("categoryId", categoryId);
+    if (targetFolderId) params.set("folderId", targetFolderId);
+    params.set("msg", "file-move-skipped");
+    return { successPath: sharedFilesPath(params.toString(), `file-${fileId}`) };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.sharedFile.update({
+      where: { id: fileId },
+      data: { folderId: targetFolderId },
+    });
+    await tx.sharedFileAudit.create({
+      data: {
+        fileId,
+        actorId,
+        action: "MOVE",
+        note: targetLabel,
+        fileTitleSnapshot: file.title,
+      },
+    });
+  });
+
+  const params = new URLSearchParams();
+  params.set("categoryId", categoryId);
+  if (targetFolderId) params.set("folderId", targetFolderId);
+  params.set("msg", "file-moved");
+  return { successPath: sharedFilesPath(params.toString(), `file-${fileId}`) };
 }
