@@ -19,11 +19,13 @@ export async function POST(request: Request) {
   });
   revalidatePath("/admin/shared-files");
 
-  if (!("successQuery" in result)) {
+  const successPath = "successPath" in result ? result.successPath : undefined;
+  const errorMessage = ("error" in result ? result.error : undefined) ?? "操作失败";
+  if (!successPath) {
     return NextResponse.redirect(
-      redirectUrl(request, `/admin/shared-files?err=${encodeURIComponent(result.error)}`),
+      redirectUrl(request, `/admin/shared-files?err=${encodeURIComponent(errorMessage)}`),
     );
   }
 
-  return NextResponse.redirect(redirectUrl(request, `/admin/shared-files?${result.successQuery}`));
+  return NextResponse.redirect(redirectUrl(request, successPath));
 }

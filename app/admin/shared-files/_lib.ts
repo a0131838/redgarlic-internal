@@ -12,6 +12,11 @@ function enc(value: string) {
   return encodeURIComponent(value);
 }
 
+function sharedFilesPath(query: string, hash?: string) {
+  const fragment = hash ? `#${hash}` : "";
+  return `/admin/shared-files?${query}${fragment}`;
+}
+
 function requestOrigin(request: Request) {
   const fallback = new URL(request.url);
   const host =
@@ -66,7 +71,7 @@ export async function addCategoryFromForm(formData: FormData) {
     return { error: "分类已存在" };
   }
 
-  return { successQuery: "msg=category-created" };
+  return { successPath: sharedFilesPath("msg=category-created", "category-form") };
 }
 
 export async function uploadSharedFileFromForm(formData: FormData, actorId: string) {
@@ -125,7 +130,7 @@ export async function uploadSharedFileFromForm(formData: FormData, actorId: stri
     });
   });
 
-  return { successQuery: "msg=uploaded" };
+  return { successPath: sharedFilesPath("msg=uploaded", "file-list") };
 }
 
 export async function updateSharedFileStatusFromForm(formData: FormData, actor: { id: string; email: string }) {
@@ -167,7 +172,10 @@ export async function updateSharedFileStatusFromForm(formData: FormData, actor: 
   });
 
   return {
-    successQuery: `msg=${enc(`status-${nextStatus.toLowerCase()}`)}`,
+    successPath: sharedFilesPath(
+      `msg=${enc(`status-${nextStatus.toLowerCase()}`)}`,
+      `file-${fileId}`,
+    ),
   };
 }
 
@@ -206,5 +214,5 @@ export async function permanentlyDeleteSharedFileFromForm(formData: FormData) {
     where: { id: fileId },
   });
 
-  return { successQuery: "msg=deleted-permanently" };
+  return { successPath: sharedFilesPath("msg=deleted-permanently", "file-list") };
 }

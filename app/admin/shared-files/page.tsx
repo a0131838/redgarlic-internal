@@ -160,6 +160,7 @@ export default async function SharedFilesPage({
         }}
       >
         <div
+          id="file-list"
           style={{
             borderRadius: 20,
             border: "1px solid #e5e7eb",
@@ -225,7 +226,11 @@ export default async function SharedFilesPage({
               </thead>
               <tbody>
                 {files.map((file) => (
-                  <tr key={file.id} style={{ borderBottom: "1px solid #f1f5f9", verticalAlign: "top" }}>
+                  <tr
+                    id={`file-${file.id}`}
+                    key={file.id}
+                    style={{ borderBottom: "1px solid #f1f5f9", verticalAlign: "top", scrollMarginTop: 24 }}
+                  >
                     <td style={{ padding: "14px 8px" }}>
                       <div style={{ fontWeight: 700 }}>{file.title}</div>
                       <div style={{ color: "#6b7280", fontSize: 13 }}>{file.originalFileName}</div>
@@ -317,6 +322,7 @@ export default async function SharedFilesPage({
         {isManager ? (
           <div style={{ display: "grid", gap: 16, alignContent: "start", alignSelf: "start", position: "sticky", top: 20 }}>
             <section
+              id="category-form"
               style={{
                 borderRadius: 20,
                 border: "1px solid #e5e7eb",

@@ -23,3 +23,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - keep the shared-file right rail top-aligned so long file tables do not distort the upload and category cards
 - favor a wider left document table on desktop so admins can always reach operation buttons without awkward clipping
 - build shared-file redirects from forwarded host/protocol headers so proxy deployments never bounce users to localhost
+- preserve operator context after shared-file mutations by redirecting back to the touched row or relevant section

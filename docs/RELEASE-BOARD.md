@@ -20,6 +20,7 @@
   - the right-side upload and category cards keep their own height even when the left file table becomes very long
   - the desktop split now prioritizes the file table width while keeping the upload rail fixed and sticky
   - shared-file form redirects now rebuild their origin from proxy headers, preventing localhost bounce-backs
+  - shared-file redirects now include anchors so admins stay near the row or section they just changed
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates
