@@ -57,6 +57,32 @@ export async function requireManagerForRoute(request: Request): Promise<RouteMan
   return { employee };
 }
 
+export async function getFolderLineage(folderId: string) {
+  const lineage: Array<{ id: string; name: string; categoryId: string; parentId: string | null }> = [];
+  let cursor = folderId;
+
+  while (cursor) {
+    const folder = await prisma.sharedFolder.findUnique({
+      where: { id: cursor },
+      select: {
+        id: true,
+        name: true,
+        categoryId: true,
+        parentId: true,
+      },
+    });
+
+    if (!folder) {
+      return null;
+    }
+
+    lineage.unshift(folder);
+    cursor = folder.parentId ?? "";
+  }
+
+  return lineage;
+}
+
 export async function addCategoryFromForm(formData: FormData) {
   const name = text(formData.get("name")).slice(0, 40);
   if (!name) {
@@ -74,10 +100,57 @@ export async function addCategoryFromForm(formData: FormData) {
   return { successPath: sharedFilesPath("msg=category-created", "category-form") };
 }
 
+export async function createFolderFromForm(formData: FormData) {
+  await ensureDefaultFileCategories();
+
+  const name = text(formData.get("name")).slice(0, 80);
+  const categoryId = text(formData.get("categoryId"));
+  const parentId = text(formData.get("parentId")) || null;
+
+  if (!name) {
+    return { error: "文件夹名称不能为空" };
+  }
+  if (!categoryId) {
+    return { error: "请选择分类" };
+  }
+
+  const category = await prisma.fileCategory.findUnique({
+    where: { id: categoryId },
+    select: { id: true },
+  });
+  if (!category) {
+    return { error: "分类不存在" };
+  }
+
+  if (parentId) {
+    const lineage = await getFolderLineage(parentId);
+    if (!lineage?.length || lineage[lineage.length - 1]?.categoryId !== categoryId) {
+      return { error: "目标目录不存在" };
+    }
+  }
+
+  try {
+    const created = await prisma.sharedFolder.create({
+      data: {
+        name,
+        categoryId,
+        parentId,
+      },
+      select: { id: true },
+    });
+
+    const query = `categoryId=${enc(categoryId)}&folderId=${enc(created.id)}&msg=folder-created`;
+    return { successPath: sharedFilesPath(query, `folder-${created.id}`) };
+  } catch {
+    return { error: "同一目录下已存在同名文件夹" };
+  }
+}
+
 export async function uploadSharedFileFromForm(formData: FormData, actorId: string) {
   await ensureDefaultFileCategories();
 
   const categoryId = text(formData.get("categoryId"));
+  const folderId = text(formData.get("folderId")) || null;
   const remarks = text(formData.get("remarks")).slice(0, 500);
   const titleInput = text(formData.get("title")).slice(0, 120);
   const file = formData.get("file");
@@ -96,9 +169,22 @@ export async function uploadSharedFileFromForm(formData: FormData, actorId: stri
     return { error: "分类不存在" };
   }
 
+  let folderLineage: Array<{ id: string; name: string; categoryId: string; parentId: string | null }> = [];
+  if (folderId) {
+    const lineage = await getFolderLineage(folderId);
+    if (!lineage?.length || lineage[lineage.length - 1]?.categoryId !== categoryId) {
+      return { error: "目标目录不存在" };
+    }
+    folderLineage = lineage;
+  }
+
   let stored;
   try {
-    stored = await storeSharedFile(file, category.name);
+    stored = await storeSharedFile(
+      file,
+      category.name,
+      folderLineage.map((folder) => folder.name),
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "文件上传失败";
     return { error: message };
@@ -111,6 +197,7 @@ export async function uploadSharedFileFromForm(formData: FormData, actorId: stri
       data: {
         title,
         categoryId,
+        folderId,
         filePath: stored.filePath,
         originalFileName: stored.originalName,
         mimeType: stored.mimeType,
@@ -130,12 +217,19 @@ export async function uploadSharedFileFromForm(formData: FormData, actorId: stri
     });
   });
 
-  return { successPath: sharedFilesPath("msg=uploaded", "file-list") };
+  const params = new URLSearchParams();
+  params.set("categoryId", categoryId);
+  if (folderId) params.set("folderId", folderId);
+  params.set("msg", "uploaded");
+
+  return { successPath: sharedFilesPath(params.toString(), "file-list") };
 }
 
 export async function updateSharedFileStatusFromForm(formData: FormData, actor: { id: string; email: string }) {
   const fileId = text(formData.get("fileId"));
   const nextStatus = text(formData.get("nextStatus")).toUpperCase();
+  const categoryId = text(formData.get("categoryId"));
+  const folderId = text(formData.get("folderId"));
 
   if (!fileId || !Object.values(SharedFileStatus).includes(nextStatus as SharedFileStatus)) {
     return { error: "无效操作" };
@@ -171,16 +265,21 @@ export async function updateSharedFileStatusFromForm(formData: FormData, actor: 
     });
   });
 
+  const params = new URLSearchParams();
+  if (categoryId) params.set("categoryId", categoryId);
+  if (folderId) params.set("folderId", folderId);
+  params.set("msg", `status-${nextStatus.toLowerCase()}`);
+
   return {
-    successPath: sharedFilesPath(
-      `msg=${enc(`status-${nextStatus.toLowerCase()}`)}`,
-      `file-${fileId}`,
-    ),
+    successPath: sharedFilesPath(params.toString(), `file-${fileId}`),
   };
 }
 
 export async function permanentlyDeleteSharedFileFromForm(formData: FormData) {
   const fileId = text(formData.get("fileId"));
+  const categoryId = text(formData.get("categoryId"));
+  const folderId = text(formData.get("folderId"));
+
   if (!fileId) {
     return { error: "文件不存在" };
   }
@@ -189,7 +288,6 @@ export async function permanentlyDeleteSharedFileFromForm(formData: FormData) {
     where: { id: fileId },
     select: {
       id: true,
-      title: true,
       filePath: true,
       status: true,
     },
@@ -214,5 +312,10 @@ export async function permanentlyDeleteSharedFileFromForm(formData: FormData) {
     where: { id: fileId },
   });
 
-  return { successPath: sharedFilesPath("msg=deleted-permanently", "file-list") };
+  const params = new URLSearchParams();
+  if (categoryId) params.set("categoryId", categoryId);
+  if (folderId) params.set("folderId", folderId);
+  params.set("msg", "deleted-permanently");
+
+  return { successPath: sharedFilesPath(params.toString(), "file-list") };
 }

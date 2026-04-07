@@ -3,6 +3,7 @@ import { EmployeeRole, SharedFileStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ensureDefaultFileCategories } from "@/lib/bootstrap";
 import { requireEmployee } from "@/lib/auth";
+import { getFolderLineage } from "./_lib";
 
 export const dynamic = "force-dynamic";
 
@@ -26,12 +27,32 @@ function formatTime(date: Date) {
   }).format(date);
 }
 
+function buildHref(params: {
+  categoryId?: string;
+  folderId?: string;
+  q?: string;
+  status?: string;
+  msg?: string;
+  err?: string;
+}) {
+  const search = new URLSearchParams();
+  if (params.categoryId) search.set("categoryId", params.categoryId);
+  if (params.folderId) search.set("folderId", params.folderId);
+  if (params.q) search.set("q", params.q);
+  if (params.status) search.set("status", params.status);
+  if (params.msg) search.set("msg", params.msg);
+  if (params.err) search.set("err", params.err);
+  const qs = search.toString();
+  return qs ? `/admin/shared-files?${qs}` : "/admin/shared-files";
+}
+
 export default async function SharedFilesPage({
   searchParams,
 }: {
   searchParams?: Promise<{
     q?: string;
     categoryId?: string;
+    folderId?: string;
     status?: string;
     msg?: string;
     err?: string;
@@ -44,11 +65,33 @@ export default async function SharedFilesPage({
     employee.role === EmployeeRole.OWNER || employee.role === EmployeeRole.ADMIN;
   const sp = await searchParams;
   const q = text(sp?.q);
-  const categoryId = text(sp?.categoryId);
+  const requestedCategoryId = text(sp?.categoryId);
+  const requestedFolderId = text(sp?.folderId);
   const status = text(sp?.status).toUpperCase();
 
-  const where: {
+  const categories = await prisma.fileCategory.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+
+  const activeCategoryId =
+    requestedCategoryId || categories[0]?.id || "";
+  const activeCategory =
+    categories.find((category) => category.id === activeCategoryId) || categories[0] || null;
+
+  const folderLineage =
+    requestedFolderId && activeCategory
+      ? await getFolderLineage(requestedFolderId)
+      : null;
+  const validFolderLineage =
+    folderLineage?.length && folderLineage.every((folder) => folder.categoryId === activeCategory?.id)
+      ? folderLineage
+      : [];
+  const currentFolder = validFolderLineage[validFolderLineage.length - 1] || null;
+
+  const fileWhere: {
     categoryId?: string;
+    folderId?: string | null;
     status?: SharedFileStatus;
     OR?: Array<{
       title?: { contains: string; mode: "insensitive" };
@@ -57,38 +100,45 @@ export default async function SharedFilesPage({
     }>;
   } = {};
 
-  if (categoryId) where.categoryId = categoryId;
+  if (activeCategory?.id) fileWhere.categoryId = activeCategory.id;
+  fileWhere.folderId = currentFolder?.id || null;
   if (Object.values(SharedFileStatus).includes(status as SharedFileStatus)) {
-    where.status = status as SharedFileStatus;
+    fileWhere.status = status as SharedFileStatus;
   }
   if (q) {
-    where.OR = [
+    fileWhere.OR = [
       { title: { contains: q, mode: "insensitive" } },
       { originalFileName: { contains: q, mode: "insensitive" } },
       { remarks: { contains: q, mode: "insensitive" } },
     ];
   }
 
-  const [categories, files] = await Promise.all([
-    prisma.fileCategory.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
-    prisma.sharedFile.findMany({
-      where,
-      include: {
-        category: true,
-        uploader: true,
-        audits: {
-          include: { actor: true },
-          orderBy: { createdAt: "desc" },
-          take: 3,
-        },
-      },
-      orderBy: { createdAt: "desc" },
-      take: 100,
-    }),
-  ]);
+  const [folders, files] = activeCategory
+    ? await Promise.all([
+        prisma.sharedFolder.findMany({
+          where: {
+            categoryId: activeCategory.id,
+            parentId: currentFolder?.id || null,
+          },
+          orderBy: [{ name: "asc" }],
+        }),
+        prisma.sharedFile.findMany({
+          where: fileWhere,
+          include: {
+            category: true,
+            uploader: true,
+          },
+          orderBy: [{ createdAt: "desc" }],
+          take: 200,
+        }),
+      ])
+    : [[], []];
+
+  const rootHref = buildHref({
+    categoryId: activeCategory?.id,
+    q,
+    status,
+  });
 
   return (
     <main style={{ maxWidth: 1440, margin: "0 auto", padding: 28, display: "grid", gap: 18 }}>
@@ -106,10 +156,10 @@ export default async function SharedFilesPage({
         }}
       >
         <div>
-          <div style={{ fontSize: 13, letterSpacing: 1, opacity: 0.9 }}>FILE LIBRARY</div>
+          <div style={{ fontSize: 13, letterSpacing: 1, opacity: 0.9 }}>FILE EXPLORER</div>
           <h1 style={{ margin: "8px 0 10px" }}>共享文件库</h1>
-          <p style={{ margin: 0, maxWidth: 720, lineHeight: 1.7 }}>
-            第一阶段先把共享资料、合同、财务文件和内部资料统一留在一个可登录、可检索、可审计的入口里。
+          <p style={{ margin: 0, maxWidth: 760, lineHeight: 1.7 }}>
+            现在按电脑文件管理器的习惯来用：先进入分类，再进入文件夹，文件和目录都围绕当前目录操作。
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -167,23 +217,22 @@ export default async function SharedFilesPage({
             background: "#fff",
             padding: 20,
             display: "grid",
-            gap: 16,
+            gap: 18,
           }}
         >
-          <form style={{ display: "grid", gap: 14 }}>
+          <form method="get" style={{ display: "grid", gap: 14 }}>
             <div style={{ display: "grid", gap: 10, gridTemplateColumns: "2fr 1fr 1fr auto" }}>
               <input
                 name="q"
                 defaultValue={q}
-                placeholder="搜索标题、原文件名、备注"
+                placeholder="搜索当前目录里的文件"
                 style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
               />
               <select
                 name="categoryId"
-                defaultValue={categoryId}
+                defaultValue={activeCategory?.id}
                 style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
               >
-                <option value="">全部分类</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
                     {category.name}
@@ -209,120 +258,197 @@ export default async function SharedFilesPage({
                 筛选
               </button>
             </div>
+            {currentFolder ? <input type="hidden" name="folderId" value={currentFolder.id} /> : null}
           </form>
 
-          <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 980 }}>
-              <thead>
-                <tr style={{ textAlign: "left", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>
-                  <th style={{ padding: "12px 8px" }}>文件</th>
-                  <th style={{ padding: "12px 8px" }}>分类</th>
-                  <th style={{ padding: "12px 8px" }}>状态</th>
-                  <th style={{ padding: "12px 8px" }}>上传人</th>
-                  <th style={{ padding: "12px 8px" }}>大小</th>
-                  <th style={{ padding: "12px 8px" }}>最近动作</th>
-                  {isManager ? <th style={{ padding: "12px 8px" }}>操作</th> : null}
-                </tr>
-              </thead>
-              <tbody>
-                {files.map((file) => (
-                  <tr
-                    id={`file-${file.id}`}
-                    key={file.id}
-                    style={{ borderBottom: "1px solid #f1f5f9", verticalAlign: "top", scrollMarginTop: 24 }}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              alignItems: "center",
+              fontSize: 14,
+            }}
+          >
+            <Link href={rootHref} style={{ color: currentFolder ? "#1d4ed8" : "#111827", textDecoration: "none", fontWeight: 700 }}>
+              {activeCategory?.name || "共享文件"}
+            </Link>
+            {validFolderLineage.map((folder) => (
+              <div key={folder.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span style={{ color: "#94a3b8" }}>/</span>
+                <Link
+                  href={buildHref({
+                    categoryId: activeCategory?.id,
+                    folderId: folder.id,
+                    status,
+                  })}
+                  style={{ color: folder.id === currentFolder?.id ? "#111827" : "#1d4ed8", textDecoration: "none", fontWeight: 700 }}
+                >
+                  {folder.name}
+                </Link>
+              </div>
+            ))}
+          </div>
+
+          <section style={{ display: "grid", gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
+              <h2 style={{ margin: 0, fontSize: 18 }}>当前目录</h2>
+              {currentFolder ? (
+                <Link href={rootHref} style={{ color: "#1d4ed8", textDecoration: "none", fontSize: 14 }}>
+                  返回根目录
+                </Link>
+              ) : null}
+            </div>
+
+            {folders.length > 0 ? (
+              <div
+                style={{
+                  display: "grid",
+                  gap: 14,
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                }}
+              >
+                {folders.map((folder) => (
+                  <Link
+                    key={folder.id}
+                    id={`folder-${folder.id}`}
+                    href={buildHref({
+                      categoryId: activeCategory?.id,
+                      folderId: folder.id,
+                      status,
+                    })}
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                      borderRadius: 18,
+                      border: "1px solid #e5e7eb",
+                      background: "linear-gradient(180deg, #fff7ed, #ffffff)",
+                      padding: 18,
+                      textDecoration: "none",
+                      color: "#111827",
+                      scrollMarginTop: 24,
+                    }}
                   >
-                    <td style={{ padding: "14px 8px" }}>
-                      <div style={{ fontWeight: 700 }}>{file.title}</div>
-                      <div style={{ color: "#6b7280", fontSize: 13 }}>{file.originalFileName}</div>
-                      {file.remarks ? <div style={{ marginTop: 6, color: "#4b5563", fontSize: 13 }}>{file.remarks}</div> : null}
-                      <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                        <a href={`/api/admin/shared-files/${file.id}`} target="_blank" rel="noreferrer">
-                          预览
-                        </a>
-                        <a href={`/api/admin/shared-files/${file.id}?download=1`}>
-                          下载
-                        </a>
-                      </div>
-                    </td>
-                    <td style={{ padding: "14px 8px" }}>{file.category.name}</td>
-                    <td style={{ padding: "14px 8px" }}>{file.status}</td>
-                    <td style={{ padding: "14px 8px" }}>
-                      <div>{file.uploader.name}</div>
-                      <div style={{ color: "#6b7280", fontSize: 13 }}>{file.uploader.email}</div>
-                    </td>
-                    <td style={{ padding: "14px 8px" }}>
-                      <div>{formatBytes(file.fileSizeBytes)}</div>
-                      <div style={{ color: "#6b7280", fontSize: 13 }}>{formatTime(file.createdAt)}</div>
-                    </td>
-                    <td style={{ padding: "14px 8px", fontSize: 13, color: "#4b5563" }}>
-                      {file.audits.length === 0
-                        ? "无"
-                        : file.audits.map((audit) => (
-                            <div key={audit.id} style={{ marginBottom: 6 }}>
-                              {audit.action} · {audit.actor.name} · {formatTime(audit.createdAt)}
-                            </div>
-                          ))}
-                    </td>
-                    {isManager ? (
+                    <div style={{ fontSize: 28 }}>📁</div>
+                    <div style={{ fontWeight: 700, fontSize: 16 }}>{folder.name}</div>
+                    <div style={{ color: "#6b7280", fontSize: 13 }}>打开文件夹</div>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: 18, borderRadius: 16, border: "1px dashed #d1d5db", color: "#6b7280" }}>
+                当前目录还没有子文件夹。
+              </div>
+            )}
+          </section>
+
+          <section style={{ display: "grid", gap: 12 }}>
+            <h2 style={{ margin: 0, fontSize: 18 }}>文件</h2>
+            <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 920 }}>
+                <thead>
+                  <tr style={{ textAlign: "left", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>
+                    <th style={{ padding: "12px 8px" }}>文件</th>
+                    <th style={{ padding: "12px 8px" }}>状态</th>
+                    <th style={{ padding: "12px 8px" }}>上传人</th>
+                    <th style={{ padding: "12px 8px" }}>大小</th>
+                    <th style={{ padding: "12px 8px" }}>时间</th>
+                    {isManager ? <th style={{ padding: "12px 8px" }}>操作</th> : null}
+                  </tr>
+                </thead>
+                <tbody>
+                  {files.map((file) => (
+                    <tr
+                      id={`file-${file.id}`}
+                      key={file.id}
+                      style={{ borderBottom: "1px solid #f1f5f9", verticalAlign: "top", scrollMarginTop: 24 }}
+                    >
                       <td style={{ padding: "14px 8px" }}>
-                        <div style={{ display: "grid", gap: 8 }}>
-                          {file.status !== SharedFileStatus.ARCHIVED ? (
-                            <form action="/admin/shared-files/status" method="post">
-                              <input type="hidden" name="fileId" value={file.id} />
-                              <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
-                              <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
-                                归档
-                              </button>
-                            </form>
-                          ) : (
-                            <form action="/admin/shared-files/status" method="post">
-                              <input type="hidden" name="fileId" value={file.id} />
-                              <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
-                              <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
-                                恢复
-                              </button>
-                            </form>
-                          )}
-                          {file.status !== SharedFileStatus.DELETED ? (
-                            <form action="/admin/shared-files/status" method="post">
-                              <input type="hidden" name="fileId" value={file.id} />
-                              <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
-                              <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #fecaca", color: "#991b1b", background: "#fff5f5" }}>
-                                标记删除
-                              </button>
-                            </form>
-                          ) : (
-                            <form action="/admin/shared-files/delete" method="post">
-                              <input type="hidden" name="fileId" value={file.id} />
-                              <button
-                                type="submit"
-                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
-                              >
-                                彻底删除
-                              </button>
-                            </form>
-                          )}
+                        <div style={{ fontWeight: 700 }}>{file.title}</div>
+                        <div style={{ color: "#6b7280", fontSize: 13 }}>{file.originalFileName}</div>
+                        {file.remarks ? <div style={{ marginTop: 6, color: "#4b5563", fontSize: 13 }}>{file.remarks}</div> : null}
+                        <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                          <a href={`/api/admin/shared-files/${file.id}`} target="_blank" rel="noreferrer">
+                            预览
+                          </a>
+                          <a href={`/api/admin/shared-files/${file.id}?download=1`}>下载</a>
                         </div>
                       </td>
-                    ) : null}
-                  </tr>
-                ))}
-                {files.length === 0 ? (
-                  <tr>
-                    <td colSpan={isManager ? 7 : 6} style={{ padding: 30, textAlign: "center", color: "#6b7280" }}>
-                      暂时没有文件。{isManager ? "可以从右侧先上传第一份共享资料。" : ""}
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
+                      <td style={{ padding: "14px 8px" }}>{file.status}</td>
+                      <td style={{ padding: "14px 8px" }}>
+                        <div>{file.uploader.name}</div>
+                        <div style={{ color: "#6b7280", fontSize: 13 }}>{file.uploader.email}</div>
+                      </td>
+                      <td style={{ padding: "14px 8px" }}>{formatBytes(file.fileSizeBytes)}</td>
+                      <td style={{ padding: "14px 8px", color: "#4b5563", fontSize: 13 }}>{formatTime(file.createdAt)}</td>
+                      {isManager ? (
+                        <td style={{ padding: "14px 8px" }}>
+                          <div style={{ display: "grid", gap: 8 }}>
+                            {file.status !== SharedFileStatus.ARCHIVED ? (
+                              <form action="/admin/shared-files/status" method="post">
+                                <input type="hidden" name="fileId" value={file.id} />
+                                <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
+                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
+                                  归档
+                                </button>
+                              </form>
+                            ) : (
+                              <form action="/admin/shared-files/status" method="post">
+                                <input type="hidden" name="fileId" value={file.id} />
+                                <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
+                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
+                                  恢复
+                                </button>
+                              </form>
+                            )}
+                            {file.status !== SharedFileStatus.DELETED ? (
+                              <form action="/admin/shared-files/status" method="post">
+                                <input type="hidden" name="fileId" value={file.id} />
+                                <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
+                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #fecaca", color: "#991b1b", background: "#fff5f5" }}>
+                                  标记删除
+                                </button>
+                              </form>
+                            ) : (
+                              <form action="/admin/shared-files/delete" method="post">
+                                <input type="hidden" name="fileId" value={file.id} />
+                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                <button
+                                  type="submit"
+                                  style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
+                                >
+                                  彻底删除
+                                </button>
+                              </form>
+                            )}
+                          </div>
+                        </td>
+                      ) : null}
+                    </tr>
+                  ))}
+                  {files.length === 0 ? (
+                    <tr>
+                      <td colSpan={isManager ? 6 : 5} style={{ padding: 30, textAlign: "center", color: "#6b7280" }}>
+                        当前目录里还没有文件。
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
 
         {isManager ? (
           <div style={{ display: "grid", gap: 16, alignContent: "start", alignSelf: "start", position: "sticky", top: 20 }}>
             <section
-              id="category-form"
               style={{
                 borderRadius: 20,
                 border: "1px solid #e5e7eb",
@@ -330,25 +456,21 @@ export default async function SharedFilesPage({
                 padding: 20,
                 display: "grid",
                 gap: 14,
-                alignSelf: "start",
               }}
             >
-              <h2 style={{ margin: 0 }}>上传共享文件</h2>
+              <div>
+                <h2 style={{ margin: 0 }}>上传到当前目录</h2>
+                <div style={{ marginTop: 8, color: "#6b7280", fontSize: 13 }}>
+                  目标位置：{activeCategory?.name || "未选择分类"}
+                  {validFolderLineage.map((folder) => ` / ${folder.name}`).join("")}
+                </div>
+              </div>
               <form action="/admin/shared-files/upload" method="post" encType="multipart/form-data" style={{ display: "grid", gap: 12 }}>
+                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
                 <label style={{ display: "grid", gap: 6 }}>
                   <span>文件标题</span>
                   <input name="title" placeholder="不填则使用原文件名" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
-                </label>
-                <label style={{ display: "grid", gap: 6 }}>
-                  <span>分类</span>
-                  <select name="categoryId" required style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}>
-                    <option value="">请选择</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
                 </label>
                 <label style={{ display: "grid", gap: 6 }}>
                   <span>备注</span>
@@ -359,12 +481,13 @@ export default async function SharedFilesPage({
                   <input name="file" type="file" required style={{ padding: 8, borderRadius: 12, border: "1px solid #d1d5db" }} />
                 </label>
                 <button type="submit" style={{ borderRadius: 999, border: 0, background: "#7f1d1d", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
-                  上传
+                  上传文件
                 </button>
               </form>
             </section>
 
             <section
+              id="folder-form"
               style={{
                 borderRadius: 20,
                 border: "1px solid #e5e7eb",
@@ -372,13 +495,39 @@ export default async function SharedFilesPage({
                 padding: 20,
                 display: "grid",
                 gap: 14,
-                alignSelf: "start",
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0 }}>新建文件夹</h2>
+                <div style={{ marginTop: 8, color: "#6b7280", fontSize: 13 }}>
+                  在当前目录下面创建新的子文件夹
+                </div>
+              </div>
+              <form action="/admin/shared-files/folder" method="post" style={{ display: "grid", gap: 12 }}>
+                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                <input type="hidden" name="parentId" value={currentFolder?.id || ""} />
+                <input name="name" placeholder="例如 法务 / 销售 / 交付" required style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
+                <button type="submit" style={{ borderRadius: 999, border: 0, background: "#111827", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
+                  创建文件夹
+                </button>
+              </form>
+            </section>
+
+            <section
+              id="category-form"
+              style={{
+                borderRadius: 20,
+                border: "1px solid #e5e7eb",
+                background: "#fff",
+                padding: 20,
+                display: "grid",
+                gap: 14,
               }}
             >
               <h2 style={{ margin: 0 }}>新增分类</h2>
               <form action="/admin/shared-files/category" method="post" style={{ display: "grid", gap: 12 }}>
                 <input name="name" placeholder="例如 Legal / Sales / Delivery" required style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
-                <button type="submit" style={{ borderRadius: 999, border: 0, background: "#111827", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
+                <button type="submit" style={{ borderRadius: 999, border: 0, background: "#374151", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
                   创建分类
                 </button>
               </form>

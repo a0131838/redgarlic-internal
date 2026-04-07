@@ -21,6 +21,7 @@
   - the desktop split now prioritizes the file table width while keeping the upload rail fixed and sticky
   - shared-file form redirects now rebuild their origin from proxy headers, preventing localhost bounce-backs
   - shared-file redirects now include anchors so admins stay near the row or section they just changed
+  - shared files now support nested folders with computer-style browsing, breadcrumb navigation, and in-place folder creation
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

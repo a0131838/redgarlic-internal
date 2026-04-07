@@ -37,13 +37,14 @@ function safeExtension(fileName: string) {
   return /^[.a-zA-Z0-9]+$/.test(ext) && ext ? ext : ".bin";
 }
 
-function buildObjectKey(categoryName: string, originalName: string) {
+function buildObjectKey(categoryName: string, originalName: string, folderNames: string[] = []) {
   const monthKey = new Date().toISOString().slice(0, 7);
   const safeCategory = sanitizeSegment(categoryName);
+  const safeFolders = folderNames.map((segment) => sanitizeSegment(segment));
   const storeName = `${Date.now()}_${crypto.randomBytes(4).toString("hex")}${safeExtension(
     originalName
   )}`;
-  return path.posix.join("shared-files", safeCategory, monthKey, storeName);
+  return path.posix.join("shared-files", safeCategory, ...safeFolders, monthKey, storeName);
 }
 
 function getStorageDriver(): SharedFileStorageDriver {
@@ -131,12 +132,12 @@ function absoluteLocalPath(filePath: string) {
   return path.join(LOCAL_BASE_DIR, ...objectKey.replace(/^shared-files\//, "").split("/"));
 }
 
-export async function storeSharedFile(file: File, categoryName: string) {
+export async function storeSharedFile(file: File, categoryName: string, folderNames: string[] = []) {
   if (!(file instanceof File) || !file.size) {
     throw new Error("Please select a file.");
   }
 
-  const objectKey = buildObjectKey(categoryName, file.name || "file");
+  const objectKey = buildObjectKey(categoryName, file.name || "file", folderNames);
   const buffer = Buffer.from(await file.arrayBuffer());
   const mimeType = file.type || null;
 

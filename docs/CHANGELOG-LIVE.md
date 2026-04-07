@@ -17,3 +17,4 @@
 - widened the shared-file desktop layout so the left table can show management actions without squeezing behind the upload rail
 - corrected shared-file POST redirects so reverse-proxied requests return to the real domain instead of localhost
 - preserved useful scroll position after shared-file actions so row updates and deletes no longer bounce the user to the top
+- upgraded the shared file area to a folder-based explorer with nested directories, breadcrumbs, and current-folder uploads

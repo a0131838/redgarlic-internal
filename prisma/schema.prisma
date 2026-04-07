@@ -57,13 +57,32 @@ model FileCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  files SharedFile[]
+  folders SharedFolder[]
+  files   SharedFile[]
+}
+
+model SharedFolder {
+  id         String   @id @default(uuid())
+  name       String
+  categoryId String
+  parentId   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category FileCategory  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  parent   SharedFolder? @relation("SharedFolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children SharedFolder[] @relation("SharedFolderTree")
+  files    SharedFile[]
+
+  @@unique([categoryId, parentId, name])
+  @@index([categoryId, parentId, createdAt])
 }
 
 model SharedFile {
   id               String           @id @default(uuid())
   title            String
   categoryId       String
+  folderId         String?
   status           SharedFileStatus @default(ACTIVE)
   filePath         String
   originalFileName String
@@ -76,11 +95,13 @@ model SharedFile {
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
-  category FileCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  uploader Employee     @relation("SharedFileUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+  category FileCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  folder   SharedFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  uploader Employee      @relation("SharedFileUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
   audits   SharedFileAudit[]
 
   @@index([categoryId, status, createdAt])
+  @@index([folderId, status, createdAt])
   @@index([uploadedById, createdAt])
 }
 
