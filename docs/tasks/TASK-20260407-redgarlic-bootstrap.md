@@ -29,4 +29,5 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - keep audit evidence after permanent file deletion by allowing audit rows to outlive the deleted file row
 - serialize the first-owner bootstrap path so one empty system cannot mint multiple owners under concurrent load
 - move logout side effects behind `POST` rather than `GET`
+- rebuild logout redirects from forwarded host/protocol headers so sign-out lands on the public domain in proxied deployments
 - enforce a server-side upload byte cap and stream shared-file writes to reduce memory pressure during uploads

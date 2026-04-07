@@ -22,4 +22,5 @@
 - preserved shared-file audit history after permanent file deletion by detaching audit rows from deleted files and snapshotting the file title
 - serialized first-owner bootstrap with a PostgreSQL advisory lock so concurrent setup requests cannot create multiple owner accounts
 - changed logout to a `POST`-only side effect so crawlers and third-party pages cannot log users out via a stray `GET`
+- rebuilt logout redirects from proxy headers so production sign-out never bounces users toward the internal `localhost` origin
 - added server-side upload size enforcement and switched shared-file writes to streaming I/O to avoid buffering a second full copy of every upload in memory

@@ -26,6 +26,7 @@
   - permanent file deletion now keeps audit rows by nulling the file link and preserving a title snapshot for historical context
   - first-owner setup now uses a database lock so parallel initialization requests cannot create multiple owners
   - logout now requires `POST`, reducing accidental logouts from link prefetches or cross-site GET requests
+  - logout redirects now rebuild their public origin from proxy headers instead of leaking the internal app host
   - uploads now enforce an app-level size cap and stream file writes instead of materializing a second full in-memory buffer
 
 ## Release Rules
