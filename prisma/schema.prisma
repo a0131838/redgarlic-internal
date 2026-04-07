@@ -107,13 +107,14 @@ model SharedFile {
 
 model SharedFileAudit {
   id        String   @id @default(uuid())
-  fileId     String
+  fileId     String?
   actorId    String
   action     String
   note       String?
+  fileTitleSnapshot String?
   createdAt  DateTime @default(now())
 
-  file  SharedFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  file  SharedFile? @relation(fields: [fileId], references: [id], onDelete: SetNull)
   actor Employee   @relation("SharedFileAuditActor", fields: [actorId], references: [id], onDelete: Cascade)
 
   @@index([fileId, createdAt])

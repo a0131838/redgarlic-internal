@@ -61,6 +61,33 @@ export async function clearSession() {
   cookieStore.delete(sessionCookieName());
 }
 
+export async function createFirstOwner(input: {
+  name: string;
+  email: string;
+  password: string;
+}) {
+  const { hash, salt } = createPasswordHash(input.password);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(2026040701)`;
+
+    const exists = await tx.employee.count();
+    if (exists > 0) {
+      return null;
+    }
+
+    return tx.employee.create({
+      data: {
+        name: input.name,
+        email: input.email,
+        role: EmployeeRole.OWNER,
+        passwordHash: hash,
+        passwordSalt: salt,
+      },
+    });
+  });
+}
+
 export async function getCurrentEmployee() {
   const cookieStore = await cookies();
   const token = cookieStore.get(sessionCookieName())?.value;

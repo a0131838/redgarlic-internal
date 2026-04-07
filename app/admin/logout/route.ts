@@ -1,7 +1,13 @@
-import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { clearSession } from "@/lib/auth";
 
-export async function GET() {
+const SEE_OTHER = 303;
+
+export async function GET(request: Request) {
+  return NextResponse.redirect(new URL("/admin", request.url), SEE_OTHER);
+}
+
+export async function POST(request: Request) {
   await clearSession();
-  redirect("/admin/login");
+  return NextResponse.redirect(new URL("/admin/login", request.url), SEE_OTHER);
 }

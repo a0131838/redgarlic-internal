@@ -180,12 +180,24 @@ export default async function SharedFilesPage({
                 员工账号
               </Link>
             ) : null}
-            <a
-              href="/admin/logout"
-              style={{ color: "#fff", textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.45)" }}
-            >
-              退出登录
-            </a>
+            <form action="/admin/logout" method="post">
+              <button
+                type="submit"
+                style={{
+                  color: "#fff",
+                  textDecoration: "none",
+                  borderBottom: "1px solid rgba(255,255,255,0.45)",
+                  background: "transparent",
+                  borderTop: 0,
+                  borderLeft: 0,
+                  borderRight: 0,
+                  padding: 0,
+                  cursor: "pointer",
+                }}
+              >
+                退出登录
+              </button>
+            </form>
           </div>
         </div>
       </section>

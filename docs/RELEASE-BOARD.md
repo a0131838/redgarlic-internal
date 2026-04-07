@@ -23,6 +23,10 @@
   - shared-file redirects now include anchors so admins stay near the row or section they just changed
   - shared files now support nested folders with computer-style browsing, breadcrumb navigation, and in-place folder creation
   - shared-file POST handlers now answer with `303 See Other`, preventing browsers from replaying multipart form posts into the page route after upload
+  - permanent file deletion now keeps audit rows by nulling the file link and preserving a title snapshot for historical context
+  - first-owner setup now uses a database lock so parallel initialization requests cannot create multiple owners
+  - logout now requires `POST`, reducing accidental logouts from link prefetches or cross-site GET requests
+  - uploads now enforce an app-level size cap and stream file writes instead of materializing a second full in-memory buffer
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

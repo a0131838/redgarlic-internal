@@ -26,3 +26,7 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - preserve operator context after shared-file mutations by redirecting back to the touched row or relevant section
 - evolve the shared file area from a flat table into a desktop-like folder explorer with real nested directories
 - return `303 See Other` from shared-file mutation routes so successful POST submissions always land back on the explorer through a safe `GET`
+- keep audit evidence after permanent file deletion by allowing audit rows to outlive the deleted file row
+- serialize the first-owner bootstrap path so one empty system cannot mint multiple owners under concurrent load
+- move logout side effects behind `POST` rather than `GET`
+- enforce a server-side upload byte cap and stream shared-file writes to reduce memory pressure during uploads

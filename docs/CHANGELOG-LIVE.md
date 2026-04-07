@@ -19,3 +19,7 @@
 - preserved useful scroll position after shared-file actions so row updates and deletes no longer bounce the user to the top
 - upgraded the shared file area to a folder-based explorer with nested directories, breadcrumbs, and current-folder uploads
 - changed shared-file form redirects from `307` to `303` so browser follow-ups become `GET` requests and upload completion no longer crashes on the destination page
+- preserved shared-file audit history after permanent file deletion by detaching audit rows from deleted files and snapshotting the file title
+- serialized first-owner bootstrap with a PostgreSQL advisory lock so concurrent setup requests cannot create multiple owner accounts
+- changed logout to a `POST`-only side effect so crawlers and third-party pages cannot log users out via a stray `GET`
+- added server-side upload size enforcement and switched shared-file writes to streaming I/O to avoid buffering a second full copy of every upload in memory

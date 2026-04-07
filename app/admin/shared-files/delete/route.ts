@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   }
 
   const formData = await request.formData();
-  const result = await permanentlyDeleteSharedFileFromForm(formData);
+  const result = await permanentlyDeleteSharedFileFromForm(formData, auth.employee.id);
   revalidatePath("/admin/shared-files");
 
   const successPath = "successPath" in result ? result.successPath : undefined;

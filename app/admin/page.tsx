@@ -53,19 +53,22 @@ export default async function AdminHomePage() {
           >
             管理员工账号
           </Link>
-          <a
-            href="/admin/logout"
-            style={{
-              background: "#fff",
-              color: "#7f1d1d",
-              padding: "10px 16px",
-              borderRadius: 999,
-              textDecoration: "none",
-              border: "1px solid #fecaca",
-            }}
-          >
-            退出登录
-          </a>
+          <form action="/admin/logout" method="post">
+            <button
+              type="submit"
+              style={{
+                background: "#fff",
+                color: "#7f1d1d",
+                padding: "10px 16px",
+                borderRadius: 999,
+                textDecoration: "none",
+                border: "1px solid #fecaca",
+                cursor: "pointer",
+              }}
+            >
+              退出登录
+            </button>
+          </form>
         </div>
       </section>
     </main>

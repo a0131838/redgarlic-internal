@@ -1,7 +1,6 @@
-import { EmployeeRole } from "@prisma/client";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { createPasswordHash, createSession } from "@/lib/auth";
+import { createFirstOwner, createSession } from "@/lib/auth";
 import { ensureDefaultFileCategories } from "@/lib/bootstrap";
 
 export const dynamic = "force-dynamic";
@@ -26,16 +25,19 @@ async function createOwnerAction(formData: FormData) {
     redirect("/admin/setup?err=请填写姓名、邮箱，并使用至少8位密码");
   }
 
-  const { hash, salt } = createPasswordHash(password);
-  const employee = await prisma.employee.create({
-    data: {
+  let employee;
+  try {
+    employee = await createFirstOwner({
       name,
       email,
-      role: EmployeeRole.OWNER,
-      passwordHash: hash,
-      passwordSalt: salt,
-    },
-  });
+      password,
+    });
+  } catch {
+    redirect("/admin/setup?err=邮箱已存在");
+  }
+  if (!employee) {
+    redirect("/admin/login");
+  }
 
   await ensureDefaultFileCategories();
   await createSession(employee.id);

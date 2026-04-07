@@ -213,6 +213,7 @@ export async function uploadSharedFileFromForm(formData: FormData, actorId: stri
         actorId,
         action: "UPLOAD",
         note: remarks || null,
+        fileTitleSnapshot: created.title,
       },
     });
   });
@@ -261,6 +262,7 @@ export async function updateSharedFileStatusFromForm(formData: FormData, actor: 
         actorId: actor.id,
         action: `STATUS_${nextStatus}`,
         note: row.title,
+        fileTitleSnapshot: row.title,
       },
     });
   });
@@ -275,7 +277,7 @@ export async function updateSharedFileStatusFromForm(formData: FormData, actor: 
   };
 }
 
-export async function permanentlyDeleteSharedFileFromForm(formData: FormData) {
+export async function permanentlyDeleteSharedFileFromForm(formData: FormData, actorId: string) {
   const fileId = text(formData.get("fileId"));
   const categoryId = text(formData.get("categoryId"));
   const folderId = text(formData.get("folderId"));
@@ -290,6 +292,7 @@ export async function permanentlyDeleteSharedFileFromForm(formData: FormData) {
       id: true,
       filePath: true,
       status: true,
+      title: true,
     },
   });
 
@@ -308,8 +311,20 @@ export async function permanentlyDeleteSharedFileFromForm(formData: FormData) {
     return { error: message };
   }
 
-  await prisma.sharedFile.delete({
-    where: { id: fileId },
+  await prisma.$transaction(async (tx) => {
+    await tx.sharedFileAudit.create({
+      data: {
+        fileId,
+        actorId,
+        action: "DELETE_PERMANENT",
+        note: row.title,
+        fileTitleSnapshot: row.title,
+      },
+    });
+
+    await tx.sharedFile.delete({
+      where: { id: fileId },
+    });
   });
 
   const params = new URLSearchParams();

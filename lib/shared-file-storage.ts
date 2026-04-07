@@ -1,17 +1,27 @@
 import crypto from "crypto";
+import { createWriteStream } from "fs";
 import path from "path";
-import { mkdir, readFile, rm, stat, writeFile } from "fs/promises";
+import { mkdir, readFile, rm, stat } from "fs/promises";
+import { pipeline, Readable } from "stream";
+import { promisify } from "util";
 import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const LOCAL_PREFIX = "local://";
 const S3_PREFIX = "s3://";
 const LOCAL_BASE_DIR = path.join(process.cwd(), "storage", "shared-files");
+const DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+const streamPipeline = promisify(pipeline);
 
 type SharedFileStorageDriver = "local" | "s3";
 
 function readEnv(name: string) {
   return String(process.env[name] || "").trim();
+}
+
+function readPositiveInt(value: string, fallback: number) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
 function parseBool(value: string, fallback: boolean) {
@@ -37,6 +47,12 @@ function safeExtension(fileName: string) {
   return /^[.a-zA-Z0-9]+$/.test(ext) && ext ? ext : ".bin";
 }
 
+function formatByteLimit(size: number) {
+  if (size >= 1024 * 1024) return `${Math.round((size / 1024 / 1024) * 10) / 10} MB`;
+  if (size >= 1024) return `${Math.round((size / 1024) * 10) / 10} KB`;
+  return `${size} B`;
+}
+
 function buildObjectKey(categoryName: string, originalName: string, folderNames: string[] = []) {
   const monthKey = new Date().toISOString().slice(0, 7);
   const safeCategory = sanitizeSegment(categoryName);
@@ -51,6 +67,10 @@ function getStorageDriver(): SharedFileStorageDriver {
   const driver = readEnv("SHARED_FILE_STORAGE_DRIVER").toLowerCase();
   if (driver === "s3") return "s3";
   return "local";
+}
+
+function getMaxUploadBytes() {
+  return readPositiveInt(readEnv("SHARED_FILE_MAX_BYTES"), DEFAULT_MAX_UPLOAD_BYTES);
 }
 
 function getS3Config() {
@@ -136,10 +156,13 @@ export async function storeSharedFile(file: File, categoryName: string, folderNa
   if (!(file instanceof File) || !file.size) {
     throw new Error("Please select a file.");
   }
+  if (file.size > getMaxUploadBytes()) {
+    throw new Error(`文件不能超过 ${formatByteLimit(getMaxUploadBytes())}`);
+  }
 
   const objectKey = buildObjectKey(categoryName, file.name || "file", folderNames);
-  const buffer = Buffer.from(await file.arrayBuffer());
   const mimeType = file.type || null;
+  const stream = Readable.fromWeb(file.stream() as never);
 
   if (getStorageDriver() === "s3") {
     const { client, config } = createS3Client();
@@ -147,7 +170,7 @@ export async function storeSharedFile(file: File, categoryName: string, folderNa
       new PutObjectCommand({
         Bucket: config.bucket,
         Key: objectKey,
-        Body: buffer,
+        Body: stream,
         ContentType: mimeType || "application/octet-stream",
       })
     );
@@ -162,8 +185,14 @@ export async function storeSharedFile(file: File, categoryName: string, folderNa
 
   const relativeKey = objectKey.replace(/^shared-files\//, "");
   const absoluteDir = path.join(LOCAL_BASE_DIR, ...path.posix.dirname(relativeKey).split("/"));
+  const absolutePath = path.join(LOCAL_BASE_DIR, ...relativeKey.split("/"));
   await mkdir(absoluteDir, { recursive: true });
-  await writeFile(path.join(LOCAL_BASE_DIR, ...relativeKey.split("/")), buffer);
+  try {
+    await streamPipeline(stream, createWriteStream(absolutePath));
+  } catch (error) {
+    await rm(absolutePath, { force: true }).catch(() => undefined);
+    throw error;
+  }
 
   return {
     filePath: localUriFromObjectKey(objectKey),
