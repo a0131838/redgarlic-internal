@@ -33,3 +33,4 @@
 - compressed the per-file action area into a denser desktop-style layout so each file row stays readable even with multiple controls
 - upgraded the batch toolbar from move-only to multi-action so selected files can now be moved, archived, or soft-deleted together
 - moved per-file secondary actions into a compact “more actions” disclosure so the explorer keeps a cleaner desktop-style rhythm
+- translated internal success codes into human-readable Chinese feedback and moved folder-card secondary actions into the same “more actions” pattern as file rows

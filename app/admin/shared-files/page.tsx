@@ -101,6 +101,41 @@ function buildHref(params: {
   return qs ? `/admin/shared-files?${qs}` : "/admin/shared-files";
 }
 
+function humanizeFeedbackMessage(msg: string) {
+  if (!msg) return "";
+
+  if (msg === "uploaded") return "文件上传成功。";
+  if (msg === "category-created") return "新分类已经创建好了。";
+  if (msg === "folder-created") return "文件夹创建成功。";
+  if (msg === "folder-renamed") return "文件夹名称已更新。";
+  if (msg === "folder-rename-skipped") return "文件夹名称没有变化。";
+  if (msg === "folder-moved") return "文件夹已经移动到新目录。";
+  if (msg === "folder-move-skipped") return "文件夹位置没有变化。";
+  if (msg === "folder-deleted") return "文件夹已删除。";
+  if (msg === "file-renamed") return "文件名称已更新。";
+  if (msg === "file-rename-skipped") return "文件名称没有变化。";
+  if (msg === "file-moved") return "文件已经移动到新目录。";
+  if (msg === "file-move-skipped") return "文件位置没有变化。";
+  if (msg === "file-bulk-move-skipped") return "选中的文件已经都在目标目录里。";
+  if (msg === "file-bulk-archive-skipped") return "选中的文件已经都处于归档状态。";
+  if (msg === "file-bulk-delete-skipped") return "选中的文件已经都标记删除了。";
+  if (msg === "deleted-permanently") return "文件已从系统和存储中彻底删除。";
+  if (msg === "status-active") return "文件已恢复为可用状态。";
+  if (msg === "status-archived") return "文件已归档。";
+  if (msg === "status-deleted") return "文件已标记删除。";
+
+  const bulkMoved = msg.match(/^file-bulk-moved-(\d+)$/);
+  if (bulkMoved) return `已批量移动 ${bulkMoved[1]} 个文件。`;
+
+  const bulkArchived = msg.match(/^file-bulk-archived-(\d+)$/);
+  if (bulkArchived) return `已批量归档 ${bulkArchived[1]} 个文件。`;
+
+  const bulkDeleted = msg.match(/^file-bulk-deleted-(\d+)$/);
+  if (bulkDeleted) return `已批量标记删除 ${bulkDeleted[1]} 个文件。`;
+
+  return msg.replace(/-/g, " ");
+}
+
 export default async function SharedFilesPage({
   searchParams,
 }: {
@@ -210,6 +245,7 @@ export default async function SharedFilesPage({
     q,
     status,
   });
+  const feedbackMessage = humanizeFeedbackMessage(text(sp?.msg));
 
   return (
     <main style={{ maxWidth: 1440, margin: "0 auto", padding: 28, display: "grid", gap: 18 }}>
@@ -273,9 +309,9 @@ export default async function SharedFilesPage({
         </div>
       </section>
 
-      {sp?.msg ? (
+      {feedbackMessage ? (
         <div style={{ padding: 12, borderRadius: 16, background: "#ecfdf5", color: "#166534", border: "1px solid #bbf7d0" }}>
-          {sp.msg}
+          {feedbackMessage}
         </div>
       ) : null}
       {sp?.err ? (
@@ -445,51 +481,72 @@ export default async function SharedFilesPage({
                               重命名
                             </button>
                           </form>
-                          <form action="/admin/shared-files/folder-move" method="post" style={{ display: "grid", gap: 8 }}>
-                            <input type="hidden" name="folderId" value={folder.id} />
-                            <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                            <select
-                              name="targetParentId"
-                              defaultValue={folder.parentId || ""}
-                              style={{ padding: 8, borderRadius: 10, border: "1px solid #d1d5db", background: "#fff" }}
-                            >
-                              {[{ value: "", label: "根目录" }, ...buildFolderOptions(allFolders, null, 0, [], collectDescendantIds(allFolders, folder.id))].map((option) => (
-                                <option key={option.value || "root"} value={option.value}>
-                                  {option.label}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              type="submit"
-                              style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid #bfdbfe", color: "#1d4ed8", background: "#eff6ff" }}
-                            >
-                              移动文件夹
-                            </button>
-                          </form>
-                          <form action="/admin/shared-files/folder-delete" method="post">
-                            <input type="hidden" name="folderId" value={folder.id} />
-                            <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                            <input type="hidden" name="returnFolderId" value={currentFolderRecord?.id || ""} />
-                            <input type="hidden" name="focusId" value="file-list" />
-                            <button
-                              type="submit"
-                              disabled={!isEmptyFolder}
+                          <details
+                            style={{
+                              border: "1px solid #e5e7eb",
+                              borderRadius: 12,
+                              background: "#f8fafc",
+                              padding: "8px 10px",
+                            }}
+                          >
+                            <summary
                               style={{
-                                width: "100%",
-                                padding: "8px 10px",
-                                borderRadius: 12,
-                                border: "1px solid #fecaca",
-                                background: isEmptyFolder ? "#fff5f5" : "#f8fafc",
-                                color: isEmptyFolder ? "#991b1b" : "#94a3b8",
-                                cursor: isEmptyFolder ? "pointer" : "not-allowed",
+                                cursor: "pointer",
+                                fontWeight: 700,
+                                color: "#334155",
+                                listStyle: "none",
                               }}
                             >
-                              {isEmptyFolder ? "删除空文件夹" : "含内容，不能删除"}
-                            </button>
-                            <div style={{ marginTop: 6, color: isEmptyFolder ? "#166534" : "#6b7280", fontSize: 12, lineHeight: 1.5 }}>
-                              {folderDeleteHint}
+                              更多操作
+                            </summary>
+                            <div style={{ display: "grid", gap: 8, marginTop: 10 }}>
+                              <form action="/admin/shared-files/folder-move" method="post" style={{ display: "grid", gap: 8 }}>
+                                <input type="hidden" name="folderId" value={folder.id} />
+                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                <select
+                                  name="targetParentId"
+                                  defaultValue={folder.parentId || ""}
+                                  style={{ padding: 8, borderRadius: 10, border: "1px solid #d1d5db", background: "#fff" }}
+                                >
+                                  {[{ value: "", label: "根目录" }, ...buildFolderOptions(allFolders, null, 0, [], collectDescendantIds(allFolders, folder.id))].map((option) => (
+                                    <option key={option.value || "root"} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="submit"
+                                  style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid #bfdbfe", color: "#1d4ed8", background: "#eff6ff" }}
+                                >
+                                  移动文件夹
+                                </button>
+                              </form>
+                              <form action="/admin/shared-files/folder-delete" method="post">
+                                <input type="hidden" name="folderId" value={folder.id} />
+                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                <input type="hidden" name="returnFolderId" value={currentFolderRecord?.id || ""} />
+                                <input type="hidden" name="focusId" value="file-list" />
+                                <button
+                                  type="submit"
+                                  disabled={!isEmptyFolder}
+                                  style={{
+                                    width: "100%",
+                                    padding: "8px 10px",
+                                    borderRadius: 12,
+                                    border: "1px solid #fecaca",
+                                    background: isEmptyFolder ? "#fff5f5" : "#f8fafc",
+                                    color: isEmptyFolder ? "#991b1b" : "#94a3b8",
+                                    cursor: isEmptyFolder ? "pointer" : "not-allowed",
+                                  }}
+                                >
+                                  {isEmptyFolder ? "删除空文件夹" : "含内容，不能删除"}
+                                </button>
+                                <div style={{ marginTop: 6, color: isEmptyFolder ? "#166534" : "#6b7280", fontSize: 12, lineHeight: 1.5 }}>
+                                  {folderDeleteHint}
+                                </div>
+                              </form>
                             </div>
-                          </form>
+                          </details>
                         </div>
                       ) : null}
                     </div>
