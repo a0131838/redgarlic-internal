@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum EmployeeRole {
+  OWNER
+  ADMIN
+  STAFF
+}
+
+enum SharedFileStatus {
+  ACTIVE
+  ARCHIVED
+  DELETED
+}
+
+model Employee {
+  id           String      @id @default(uuid())
+  email        String      @unique
+  name         String
+  role         EmployeeRole @default(STAFF)
+  isActive     Boolean     @default(true)
+  passwordHash String?
+  passwordSalt String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  sessions     AuthSession[]
+  uploadedFiles SharedFile[]       @relation("SharedFileUploader")
+  fileAudits    SharedFileAudit[]  @relation("SharedFileAuditActor")
+}
+
+model AuthSession {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  employeeId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([employeeId])
+  @@index([expiresAt])
+}
+
+model FileCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  sortOrder Int      @default(100)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  files SharedFile[]
+}
+
+model SharedFile {
+  id               String           @id @default(uuid())
+  title            String
+  categoryId       String
+  status           SharedFileStatus @default(ACTIVE)
+  filePath         String
+  originalFileName String
+  mimeType         String?
+  fileSizeBytes    Int
+  remarks          String?
+  uploadedById     String
+  archivedAt       DateTime?
+  archivedByEmail  String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  category FileCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  uploader Employee     @relation("SharedFileUploader", fields: [uploadedById], references: [id], onDelete: Cascade)
+  audits   SharedFileAudit[]
+
+  @@index([categoryId, status, createdAt])
+  @@index([uploadedById, createdAt])
+}
+
+model SharedFileAudit {
+  id        String   @id @default(uuid())
+  fileId     String
+  actorId    String
+  action     String
+  note       String?
+  createdAt  DateTime @default(now())
+
+  file  SharedFile @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  actor Employee   @relation("SharedFileAuditActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([fileId, createdAt])
+  @@index([actorId, createdAt])
+}
