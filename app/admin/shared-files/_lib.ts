@@ -17,6 +17,17 @@ function sharedFilesPath(query: string, hash?: string) {
   return `/admin/shared-files?${query}${fragment}`;
 }
 
+type SharedFilesRedirectInput = {
+  categoryId?: string | null;
+  folderId?: string | null;
+  q?: string | null;
+  status?: string | null;
+  folderSort?: string | null;
+  fileSort?: string | null;
+  viewMode?: string | null;
+  msg?: string | null;
+};
+
 function requestOrigin(request: Request) {
   const fallback = new URL(request.url);
   const host =
@@ -103,16 +114,33 @@ async function ensureFolderInCategory(folderId: string, categoryId: string) {
   return lineage;
 }
 
-function buildSharedFilesParams(input: {
-  categoryId?: string | null;
-  folderId?: string | null;
-  msg: string;
-}) {
+function buildSharedFilesParams(input: SharedFilesRedirectInput) {
   const params = new URLSearchParams();
   if (input.categoryId) params.set("categoryId", input.categoryId);
   if (input.folderId) params.set("folderId", input.folderId);
-  params.set("msg", input.msg);
+  if (input.q) params.set("q", input.q);
+  if (input.status) params.set("status", input.status);
+  if (input.folderSort) params.set("folderSort", input.folderSort);
+  if (input.fileSort) params.set("fileSort", input.fileSort);
+  if (input.viewMode) params.set("viewMode", input.viewMode);
+  if (input.msg) params.set("msg", input.msg);
   return params;
+}
+
+function readSharedFilesRedirectState(
+  formData: FormData,
+  overrides: Partial<SharedFilesRedirectInput> = {},
+): SharedFilesRedirectInput {
+  return {
+    categoryId: text(formData.get("categoryId")) || null,
+    folderId: text(formData.get("redirectFolderId") || formData.get("folderId")) || null,
+    q: text(formData.get("q")) || null,
+    status: text(formData.get("status")) || null,
+    folderSort: text(formData.get("folderSort")) || null,
+    fileSort: text(formData.get("fileSort")) || null,
+    viewMode: text(formData.get("viewMode")) || null,
+    ...overrides,
+  };
 }
 
 export async function addCategoryFromForm(formData: FormData) {
@@ -129,12 +157,17 @@ export async function addCategoryFromForm(formData: FormData) {
     return { error: "分类已存在" };
   }
 
-  return { successPath: sharedFilesPath("msg=category-created", "category-form") };
+  const params = buildSharedFilesParams({
+    ...readSharedFilesRedirectState(formData),
+    msg: "category-created",
+  });
+  return { successPath: sharedFilesPath(params.toString(), "category-form") };
 }
 
 export async function createFolderFromForm(formData: FormData) {
   await ensureDefaultFileCategories();
 
+  const redirectState = readSharedFilesRedirectState(formData);
   const name = text(formData.get("name")).slice(0, 80);
   const categoryId = text(formData.get("categoryId"));
   const parentId = text(formData.get("parentId")) || null;
@@ -171,14 +204,20 @@ export async function createFolderFromForm(formData: FormData) {
       select: { id: true },
     });
 
-    const query = `categoryId=${enc(categoryId)}&folderId=${enc(created.id)}&msg=folder-created`;
-    return { successPath: sharedFilesPath(query, `folder-${created.id}`) };
+    const params = buildSharedFilesParams({
+      ...redirectState,
+      categoryId,
+      folderId: created.id,
+      msg: "folder-created",
+    });
+    return { successPath: sharedFilesPath(params.toString(), `folder-${created.id}`) };
   } catch {
     return { error: "同一目录下已存在同名文件夹" };
   }
 }
 
 export async function renameFolderFromForm(formData: FormData) {
+  const redirectState = readSharedFilesRedirectState(formData);
   const folderId = text(formData.get("folderId"));
   const nextName = text(formData.get("name")).slice(0, 80);
   const categoryId = text(formData.get("categoryId"));
@@ -195,10 +234,12 @@ export async function renameFolderFromForm(formData: FormData) {
   }
 
   if (folder.name === nextName) {
-    const params = new URLSearchParams();
-    params.set("categoryId", folder.categoryId);
-    if (returnFolderId) params.set("folderId", returnFolderId);
-    params.set("msg", "folder-rename-skipped");
+    const params = buildSharedFilesParams({
+      ...redirectState,
+      categoryId: folder.categoryId,
+      folderId: returnFolderId || null,
+      msg: "folder-rename-skipped",
+    });
     return { successPath: sharedFilesPath(params.toString(), focusId || `folder-${folderId}`) };
   }
 
@@ -211,18 +252,17 @@ export async function renameFolderFromForm(formData: FormData) {
     return { error: "同一目录下已存在同名文件夹" };
   }
 
-  const params = new URLSearchParams();
-  params.set("categoryId", folder.categoryId);
-  if (returnFolderId) {
-    params.set("folderId", returnFolderId);
-  } else if (folderId) {
-    params.set("folderId", folderId);
-  }
-  params.set("msg", "folder-renamed");
+  const params = buildSharedFilesParams({
+    ...redirectState,
+    categoryId: folder.categoryId,
+    folderId: returnFolderId || folderId,
+    msg: "folder-renamed",
+  });
   return { successPath: sharedFilesPath(params.toString(), focusId || `folder-${folderId}`) };
 }
 
 export async function moveFolderFromForm(formData: FormData) {
+  const redirectState = readSharedFilesRedirectState(formData);
   const folderId = text(formData.get("folderId"));
   const categoryId = text(formData.get("categoryId"));
   const targetParentId = text(formData.get("targetParentId")) || null;
@@ -238,6 +278,7 @@ export async function moveFolderFromForm(formData: FormData) {
 
   if (folder.parentId === targetParentId) {
     const params = buildSharedFilesParams({
+      ...redirectState,
       categoryId,
       folderId,
       msg: "folder-move-skipped",
@@ -265,6 +306,7 @@ export async function moveFolderFromForm(formData: FormData) {
   }
 
   const params = buildSharedFilesParams({
+    ...redirectState,
     categoryId,
     folderId,
     msg: "folder-moved",
@@ -273,6 +315,7 @@ export async function moveFolderFromForm(formData: FormData) {
 }
 
 export async function deleteFolderFromForm(formData: FormData) {
+  const redirectState = readSharedFilesRedirectState(formData);
   const folderId = text(formData.get("folderId"));
   const categoryId = text(formData.get("categoryId"));
   const returnFolderId = text(formData.get("returnFolderId"));
@@ -300,16 +343,19 @@ export async function deleteFolderFromForm(formData: FormData) {
     where: { id: folderId },
   });
 
-  const params = new URLSearchParams();
-  params.set("categoryId", folder.categoryId);
-  if (returnFolderId) params.set("folderId", returnFolderId);
-  params.set("msg", "folder-deleted");
+  const params = buildSharedFilesParams({
+    ...redirectState,
+    categoryId: folder.categoryId,
+    folderId: returnFolderId || null,
+    msg: "folder-deleted",
+  });
   return { successPath: sharedFilesPath(params.toString(), focusId || "file-list") };
 }
 
 export async function uploadSharedFileFromForm(formData: FormData, actorId: string) {
   await ensureDefaultFileCategories();
 
+  const redirectState = readSharedFilesRedirectState(formData);
   const categoryId = text(formData.get("categoryId"));
   const folderId = text(formData.get("folderId")) || null;
   const remarks = text(formData.get("remarks")).slice(0, 500);
@@ -379,15 +425,18 @@ export async function uploadSharedFileFromForm(formData: FormData, actorId: stri
     });
   });
 
-  const params = new URLSearchParams();
-  params.set("categoryId", categoryId);
-  if (folderId) params.set("folderId", folderId);
-  params.set("msg", "uploaded");
+  const params = buildSharedFilesParams({
+    ...redirectState,
+    categoryId,
+    folderId,
+    msg: "uploaded",
+  });
 
   return { successPath: sharedFilesPath(params.toString(), "file-list") };
 }
 
 export async function updateSharedFileStatusFromForm(formData: FormData, actor: { id: string; email: string }) {
+  const redirectState = readSharedFilesRedirectState(formData);
   const fileId = text(formData.get("fileId"));
   const nextStatus = text(formData.get("nextStatus")).toUpperCase();
   const categoryId = text(formData.get("categoryId"));
@@ -428,10 +477,12 @@ export async function updateSharedFileStatusFromForm(formData: FormData, actor: 
     });
   });
 
-  const params = new URLSearchParams();
-  if (categoryId) params.set("categoryId", categoryId);
-  if (folderId) params.set("folderId", folderId);
-  params.set("msg", `status-${nextStatus.toLowerCase()}`);
+  const params = buildSharedFilesParams({
+    ...redirectState,
+    categoryId,
+    folderId,
+    msg: `status-${nextStatus.toLowerCase()}`,
+  });
 
   return {
     successPath: sharedFilesPath(params.toString(), `file-${fileId}`),
@@ -439,6 +490,7 @@ export async function updateSharedFileStatusFromForm(formData: FormData, actor: 
 }
 
 export async function permanentlyDeleteSharedFileFromForm(formData: FormData, actorId: string) {
+  const redirectState = readSharedFilesRedirectState(formData);
   const fileId = text(formData.get("fileId"));
   const categoryId = text(formData.get("categoryId"));
   const folderId = text(formData.get("folderId"));
@@ -488,15 +540,18 @@ export async function permanentlyDeleteSharedFileFromForm(formData: FormData, ac
     });
   });
 
-  const params = new URLSearchParams();
-  if (categoryId) params.set("categoryId", categoryId);
-  if (folderId) params.set("folderId", folderId);
-  params.set("msg", "deleted-permanently");
+  const params = buildSharedFilesParams({
+    ...redirectState,
+    categoryId,
+    folderId,
+    msg: "deleted-permanently",
+  });
 
   return { successPath: sharedFilesPath(params.toString(), "file-list") };
 }
 
 export async function moveSharedFileFromForm(formData: FormData, actorId: string) {
+  const redirectState = readSharedFilesRedirectState(formData);
   const fileId = text(formData.get("fileId"));
   const categoryId = text(formData.get("categoryId"));
   const targetFolderId = text(formData.get("targetFolderId")) || null;
@@ -532,10 +587,12 @@ export async function moveSharedFileFromForm(formData: FormData, actorId: string
   }
 
   if (file.folderId === targetFolderId) {
-    const params = new URLSearchParams();
-    params.set("categoryId", categoryId);
-    if (targetFolderId) params.set("folderId", targetFolderId);
-    params.set("msg", "file-move-skipped");
+    const params = buildSharedFilesParams({
+      ...redirectState,
+      categoryId,
+      folderId: targetFolderId,
+      msg: "file-move-skipped",
+    });
     return { successPath: sharedFilesPath(params.toString(), `file-${fileId}`) };
   }
 
@@ -555,10 +612,12 @@ export async function moveSharedFileFromForm(formData: FormData, actorId: string
     });
   });
 
-  const params = new URLSearchParams();
-  params.set("categoryId", categoryId);
-  if (targetFolderId) params.set("folderId", targetFolderId);
-  params.set("msg", "file-moved");
+  const params = buildSharedFilesParams({
+    ...redirectState,
+    categoryId,
+    folderId: targetFolderId,
+    msg: "file-moved",
+  });
   return { successPath: sharedFilesPath(params.toString(), `file-${fileId}`) };
 }
 
@@ -566,7 +625,9 @@ export async function applyBulkSharedFileActionFromForm(
   formData: FormData,
   actor: { id: string; email: string },
 ) {
+  const redirectState = readSharedFilesRedirectState(formData);
   const categoryId = text(formData.get("categoryId"));
+  const currentFolderId = text(formData.get("folderId")) || null;
   const bulkAction = text(formData.get("bulkAction")).toUpperCase();
   const targetFolderId = text(formData.get("targetFolderId")) || null;
   const fileIds = Array.from(
@@ -616,6 +677,7 @@ export async function applyBulkSharedFileActionFromForm(
     const filesToMove = files.filter((file) => file.folderId !== targetFolderId);
     if (filesToMove.length === 0) {
       const params = buildSharedFilesParams({
+        ...redirectState,
         categoryId,
         folderId: targetFolderId,
         msg: "file-bulk-move-skipped",
@@ -643,6 +705,7 @@ export async function applyBulkSharedFileActionFromForm(
     });
 
     const params = buildSharedFilesParams({
+      ...redirectState,
       categoryId,
       folderId: targetFolderId,
       msg: `file-bulk-moved-${filesToMove.length}`,
@@ -657,8 +720,9 @@ export async function applyBulkSharedFileActionFromForm(
 
     if (filesToUpdate.length === 0) {
       const params = buildSharedFilesParams({
+        ...redirectState,
         categoryId,
-        folderId: targetFolderId,
+        folderId: currentFolderId,
         msg: bulkAction === "ARCHIVE" ? "file-bulk-archive-skipped" : "file-bulk-delete-skipped",
       });
       return { successPath: sharedFilesPath(params.toString(), "file-list") };
@@ -688,8 +752,9 @@ export async function applyBulkSharedFileActionFromForm(
     });
 
     const params = buildSharedFilesParams({
+      ...redirectState,
       categoryId,
-      folderId: targetFolderId,
+      folderId: currentFolderId,
       msg:
         bulkAction === "ARCHIVE"
           ? `file-bulk-archived-${filesToUpdate.length}`
@@ -702,6 +767,7 @@ export async function applyBulkSharedFileActionFromForm(
 }
 
 export async function renameSharedFileFromForm(formData: FormData, actorId: string) {
+  const redirectState = readSharedFilesRedirectState(formData);
   const fileId = text(formData.get("fileId"));
   const categoryId = text(formData.get("categoryId"));
   const folderId = text(formData.get("folderId")) || null;
@@ -731,6 +797,7 @@ export async function renameSharedFileFromForm(formData: FormData, actorId: stri
 
   if (file.title === nextTitle) {
     const params = buildSharedFilesParams({
+      ...redirectState,
       categoryId,
       folderId,
       msg: "file-rename-skipped",
@@ -755,6 +822,7 @@ export async function renameSharedFileFromForm(formData: FormData, actorId: stri
   });
 
   const params = buildSharedFilesParams({
+    ...redirectState,
     categoryId,
     folderId,
     msg: "file-renamed",

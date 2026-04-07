@@ -36,3 +36,4 @@
 - translated internal success codes into human-readable Chinese feedback and moved folder-card secondary actions into the same “more actions” pattern as file rows
 - added folder/file sort selectors, clearer current-path navigation, and confirmation prompts for destructive explorer actions as the first bundled desktop-style polish pass
 - added a second explorer polish pass with comfortable/compact density modes, current-page select-all tools, and live selected-count feedback for bulk actions
+- preserved explorer search/sort/view state across uploads, moves, deletes, and folder operations so desktop-style workflows do not reset after each action

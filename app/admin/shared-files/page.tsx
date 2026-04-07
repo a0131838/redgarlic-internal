@@ -69,6 +69,33 @@ const viewModeOptions: Array<{ value: ViewMode; label: string }> = [
   { value: "compact", label: "紧凑视图" },
 ];
 
+function ExplorerStateHiddenFields({
+  redirectFolderId,
+  q,
+  status,
+  folderSort,
+  fileSort,
+  viewMode,
+}: {
+  redirectFolderId?: string;
+  q: string;
+  status: string;
+  folderSort: FolderSort;
+  fileSort: FileSort;
+  viewMode: ViewMode;
+}) {
+  return (
+    <>
+      <input type="hidden" name="redirectFolderId" value={redirectFolderId || ""} />
+      <input type="hidden" name="q" value={q} />
+      <input type="hidden" name="status" value={status} />
+      <input type="hidden" name="folderSort" value={folderSort} />
+      <input type="hidden" name="fileSort" value={fileSort} />
+      <input type="hidden" name="viewMode" value={viewMode} />
+    </>
+  );
+}
+
 function buildFolderOptions(
   folders: FolderListItem[],
   parentId: string | null = null,
@@ -553,6 +580,7 @@ export default async function SharedFilesPage({
                     q,
                     folderSort,
                     fileSort,
+                    viewMode,
                   })}
                   style={{ color: folder.id === currentFolder?.id ? "#111827" : "#1d4ed8", textDecoration: "none", fontWeight: 700 }}
                 >
@@ -638,6 +666,14 @@ export default async function SharedFilesPage({
                             <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                             <input type="hidden" name="returnFolderId" value={currentFolderRecord?.id || ""} />
                             <input type="hidden" name="focusId" value={`folder-${folder.id}`} />
+                            <ExplorerStateHiddenFields
+                              redirectFolderId={currentFolderRecord?.id || ""}
+                              q={q}
+                              status={status}
+                              folderSort={folderSort}
+                              fileSort={fileSort}
+                              viewMode={viewMode}
+                            />
                             <input
                               name="name"
                               defaultValue={folder.name}
@@ -673,6 +709,14 @@ export default async function SharedFilesPage({
                               <form action="/admin/shared-files/folder-move" method="post" style={{ display: "grid", gap: 8 }}>
                                 <input type="hidden" name="folderId" value={folder.id} />
                                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                <ExplorerStateHiddenFields
+                                  redirectFolderId={currentFolderRecord?.id || ""}
+                                  q={q}
+                                  status={status}
+                                  folderSort={folderSort}
+                                  fileSort={fileSort}
+                                  viewMode={viewMode}
+                                />
                                 <select
                                   name="targetParentId"
                                   defaultValue={folder.parentId || ""}
@@ -696,6 +740,14 @@ export default async function SharedFilesPage({
                                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                                 <input type="hidden" name="returnFolderId" value={currentFolderRecord?.id || ""} />
                                 <input type="hidden" name="focusId" value="file-list" />
+                                <ExplorerStateHiddenFields
+                                  redirectFolderId={currentFolderRecord?.id || ""}
+                                  q={q}
+                                  status={status}
+                                  folderSort={folderSort}
+                                  fileSort={fileSort}
+                                  viewMode={viewMode}
+                                />
                                 <ConfirmSubmitButton
                                   confirmMessage={`确定要删除文件夹“${folder.name}”吗？`}
                                   disabled={!isEmptyFolder}
@@ -747,6 +799,14 @@ export default async function SharedFilesPage({
                 }}
               >
                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                <ExplorerStateHiddenFields
+                  redirectFolderId={currentFolderRecord?.id || ""}
+                  q={q}
+                  status={status}
+                  folderSort={folderSort}
+                  fileSort={fileSort}
+                  viewMode={viewMode}
+                />
                 <div style={{ fontWeight: 700, color: "#1e3a8a" }}>批量整理当前目录文件</div>
                 <BulkSelectionToolbar />
                 <div style={{ display: "grid", gap: 10, gridTemplateColumns: "180px minmax(0, 1fr) auto", alignItems: "center" }}>
@@ -841,6 +901,14 @@ export default async function SharedFilesPage({
                               <input type="hidden" name="fileId" value={file.id} />
                               <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                               <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                              <ExplorerStateHiddenFields
+                                redirectFolderId={currentFolder?.id || ""}
+                                q={q}
+                                status={status}
+                                folderSort={folderSort}
+                                fileSort={fileSort}
+                                viewMode={viewMode}
+                              />
                               <input
                                 name="title"
                                 defaultValue={file.title}
@@ -861,6 +929,15 @@ export default async function SharedFilesPage({
                             >
                               <input type="hidden" name="fileId" value={file.id} />
                               <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                              <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                              <ExplorerStateHiddenFields
+                                redirectFolderId={currentFolder?.id || ""}
+                                q={q}
+                                status={status}
+                                folderSort={folderSort}
+                                fileSort={fileSort}
+                                viewMode={viewMode}
+                              />
                               <select
                                 name="targetFolderId"
                                 defaultValue={currentFolderRecord?.id || ""}
@@ -904,6 +981,14 @@ export default async function SharedFilesPage({
                                     <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
                                     <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                                     <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                    <ExplorerStateHiddenFields
+                                      redirectFolderId={currentFolder?.id || ""}
+                                      q={q}
+                                      status={status}
+                                      folderSort={folderSort}
+                                      fileSort={fileSort}
+                                      viewMode={viewMode}
+                                    />
                                     <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
                                       归档
                                     </button>
@@ -914,6 +999,14 @@ export default async function SharedFilesPage({
                                     <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
                                     <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                                     <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                    <ExplorerStateHiddenFields
+                                      redirectFolderId={currentFolder?.id || ""}
+                                      q={q}
+                                      status={status}
+                                      folderSort={folderSort}
+                                      fileSort={fileSort}
+                                      viewMode={viewMode}
+                                    />
                                     <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
                                       恢复
                                     </button>
@@ -925,6 +1018,14 @@ export default async function SharedFilesPage({
                                     <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
                                     <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                                     <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                    <ExplorerStateHiddenFields
+                                      redirectFolderId={currentFolder?.id || ""}
+                                      q={q}
+                                      status={status}
+                                      folderSort={folderSort}
+                                      fileSort={fileSort}
+                                      viewMode={viewMode}
+                                    />
                                     <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #fecaca", color: "#991b1b", background: "#fff5f5" }}>
                                       标记删除
                                     </button>
@@ -934,6 +1035,14 @@ export default async function SharedFilesPage({
                                     <input type="hidden" name="fileId" value={file.id} />
                                     <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                                     <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                    <ExplorerStateHiddenFields
+                                      redirectFolderId={currentFolder?.id || ""}
+                                      q={q}
+                                      status={status}
+                                      folderSort={folderSort}
+                                      fileSort={fileSort}
+                                      viewMode={viewMode}
+                                    />
                                   <ConfirmSubmitButton
                                     confirmMessage={`确定要彻底删除文件“${file.title}”吗？这个操作会连同存储中的文件一起移除，无法恢复。`}
                                     style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
@@ -994,6 +1103,14 @@ export default async function SharedFilesPage({
                   <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                   <input type="hidden" name="returnFolderId" value={currentFolderRecord.id} />
                   <input type="hidden" name="focusId" value="current-folder-admin" />
+                  <ExplorerStateHiddenFields
+                    redirectFolderId={currentFolderRecord.id}
+                    q={q}
+                    status={status}
+                    folderSort={folderSort}
+                    fileSort={fileSort}
+                    viewMode={viewMode}
+                  />
                   <label style={{ display: "grid", gap: 6 }}>
                     <span>文件夹名称</span>
                     <input
@@ -1010,6 +1127,14 @@ export default async function SharedFilesPage({
                 <form action="/admin/shared-files/folder-move" method="post" style={{ display: "grid", gap: 12 }}>
                   <input type="hidden" name="folderId" value={currentFolderRecord.id} />
                   <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                  <ExplorerStateHiddenFields
+                    redirectFolderId={currentFolderRecord.id}
+                    q={q}
+                    status={status}
+                    folderSort={folderSort}
+                    fileSort={fileSort}
+                    viewMode={viewMode}
+                  />
                   <label style={{ display: "grid", gap: 6 }}>
                     <span>移动到</span>
                     <select
@@ -1036,6 +1161,14 @@ export default async function SharedFilesPage({
                   <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                   <input type="hidden" name="returnFolderId" value={currentFolderRecord.parentId || ""} />
                   <input type="hidden" name="focusId" value="file-list" />
+                  <ExplorerStateHiddenFields
+                    redirectFolderId={currentFolderRecord.id}
+                    q={q}
+                    status={status}
+                    folderSort={folderSort}
+                    fileSort={fileSort}
+                    viewMode={viewMode}
+                  />
                   <ConfirmSubmitButton
                     confirmMessage={`确定要删除当前文件夹“${currentFolderRecord.name}”吗？`}
                     disabled={!currentFolderIsEmpty}
@@ -1079,6 +1212,14 @@ export default async function SharedFilesPage({
               <form action="/admin/shared-files/upload" method="post" encType="multipart/form-data" style={{ display: "grid", gap: 12 }}>
                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                 <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                <ExplorerStateHiddenFields
+                  redirectFolderId={currentFolder?.id || ""}
+                  q={q}
+                  status={status}
+                  folderSort={folderSort}
+                  fileSort={fileSort}
+                  viewMode={viewMode}
+                />
                 <label style={{ display: "grid", gap: 6 }}>
                   <span>文件标题</span>
                   <input name="title" placeholder="不填则使用原文件名" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
@@ -1117,6 +1258,14 @@ export default async function SharedFilesPage({
               <form action="/admin/shared-files/folder" method="post" style={{ display: "grid", gap: 12 }}>
                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                 <input type="hidden" name="parentId" value={currentFolder?.id || ""} />
+                <ExplorerStateHiddenFields
+                  redirectFolderId={currentFolder?.id || ""}
+                  q={q}
+                  status={status}
+                  folderSort={folderSort}
+                  fileSort={fileSort}
+                  viewMode={viewMode}
+                />
                 <input name="name" placeholder="例如 法务 / 销售 / 交付" required style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
                 <button type="submit" style={{ borderRadius: 999, border: 0, background: "#111827", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
                   创建文件夹
@@ -1137,6 +1286,15 @@ export default async function SharedFilesPage({
             >
               <h2 style={{ margin: 0 }}>新增分类</h2>
               <form action="/admin/shared-files/category" method="post" style={{ display: "grid", gap: 12 }}>
+                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                <ExplorerStateHiddenFields
+                  redirectFolderId={currentFolder?.id || ""}
+                  q={q}
+                  status={status}
+                  folderSort={folderSort}
+                  fileSort={fileSort}
+                  viewMode={viewMode}
+                />
                 <input name="name" placeholder="例如 Legal / Sales / Delivery" required style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
                 <button type="submit" style={{ borderRadius: 999, border: 0, background: "#374151", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
                   创建分类

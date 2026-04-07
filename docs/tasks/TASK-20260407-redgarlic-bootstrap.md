@@ -41,3 +41,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - replace raw action codes in explorer feedback with human-readable Chinese messages and align folder-card actions with the same disclosure pattern
 - ship a bundled explorer polish pass with sorting controls, stronger path navigation, and confirmation prompts for dangerous actions
 - follow with a second bundled polish pass that improves density control and current-page bulk-selection ergonomics
+- keep explorer mutations inside the user's current search/sort/view context so the desktop-style flow feels continuous during cleanup work
