@@ -156,6 +156,7 @@ export default async function SharedFilesPage({
           display: "grid",
           gap: 18,
           gridTemplateColumns: isManager ? "minmax(0, 1.2fr) minmax(320px, 0.8fr)" : "1fr",
+          alignItems: "start",
         }}
       >
         <div
@@ -314,7 +315,7 @@ export default async function SharedFilesPage({
         </div>
 
         {isManager ? (
-          <div style={{ display: "grid", gap: 16 }}>
+          <div style={{ display: "grid", gap: 16, alignContent: "start", alignSelf: "start" }}>
             <section
               style={{
                 borderRadius: 20,
@@ -323,6 +324,7 @@ export default async function SharedFilesPage({
                 padding: 20,
                 display: "grid",
                 gap: 14,
+                alignSelf: "start",
               }}
             >
               <h2 style={{ margin: 0 }}>上传共享文件</h2>
@@ -364,6 +366,7 @@ export default async function SharedFilesPage({
                 padding: 20,
                 display: "grid",
                 gap: 14,
+                alignSelf: "start",
               }}
             >
               <h2 style={{ margin: 0 }}>新增分类</h2>

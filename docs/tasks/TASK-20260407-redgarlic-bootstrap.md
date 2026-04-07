@@ -20,3 +20,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - raise the Next.js server action body limit so file uploads do not break once real documents exceed the default 1 MB cap
 - move the shared-file mutation forms to route handlers so already-open tabs remain usable across deployments
 - require a two-step deletion flow: mark a file deleted first, then allow permanent removal from storage and the database
+- keep the shared-file right rail top-aligned so long file tables do not distort the upload and category cards
