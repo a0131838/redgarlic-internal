@@ -4,7 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { ensureDefaultFileCategories } from "@/lib/bootstrap";
 import { requireEmployee } from "@/lib/auth";
 import { getFolderLineage } from "./_lib";
-import { BulkActionSubmitButton, BulkSelectionToolbar, ConfirmSubmitButton } from "./confirm-submit-button";
+import {
+  BulkActionSubmitButton,
+  BulkSelectionToolbar,
+  ConfirmSubmitButton,
+  FolderSelectionToolbar,
+} from "./confirm-submit-button";
 
 export const dynamic = "force-dynamic";
 
@@ -429,6 +434,8 @@ function humanizeFeedbackMessage(msg: string) {
   if (msg === "folder-moved") return "文件夹已经移动到新目录。";
   if (msg === "folder-move-skipped") return "文件夹位置没有变化。";
   if (msg === "folder-deleted") return "文件夹已删除。";
+  if (msg === "folder-bulk-move-skipped") return "选中的文件夹已经都在目标目录里。";
+  if (msg === "folder-bulk-delete-skipped") return "选中的文件夹里没有可删除的空文件夹。";
   if (msg === "file-renamed") return "文件名称已更新。";
   if (msg === "file-rename-skipped") return "文件名称没有变化。";
   if (msg === "file-moved") return "文件已经移动到新目录。";
@@ -444,6 +451,24 @@ function humanizeFeedbackMessage(msg: string) {
 
   const bulkMoved = msg.match(/^file-bulk-moved-(\d+)$/);
   if (bulkMoved) return `已批量移动 ${bulkMoved[1]} 个文件。`;
+
+  const bulkFolderMoved = msg.match(/^folder-bulk-moved-(\d+)-skipped-(\d+)$/);
+  if (bulkFolderMoved) {
+    const moved = Number(bulkFolderMoved[1]);
+    const skipped = Number(bulkFolderMoved[2]);
+    return skipped > 0
+      ? `已批量移动 ${moved} 个文件夹，另有 ${skipped} 个本来就在目标目录里。`
+      : `已批量移动 ${moved} 个文件夹。`;
+  }
+
+  const bulkFolderDeleted = msg.match(/^folder-bulk-deleted-(\d+)-skipped-(\d+)$/);
+  if (bulkFolderDeleted) {
+    const deleted = Number(bulkFolderDeleted[1]);
+    const skipped = Number(bulkFolderDeleted[2]);
+    return skipped > 0
+      ? `已批量删除 ${deleted} 个空文件夹，另有 ${skipped} 个非空文件夹被保留。`
+      : `已批量删除 ${deleted} 个空文件夹。`;
+  }
 
   const bulkArchived = msg.match(/^file-bulk-archived-(\d+)$/);
   if (bulkArchived) return `已批量归档 ${bulkArchived[1]} 个文件。`;
@@ -909,13 +934,73 @@ export default async function SharedFilesPage({
             </div>
 
             {folders.length > 0 ? (
-              <div
-                style={{
-                  display: "grid",
-                  gap: 14,
-                  gridTemplateColumns: folderGridTemplate,
-                }}
-              >
+              <div id="folder-list" style={{ display: "grid", gap: 14, scrollMarginTop: 24 }}>
+                {isManager ? (
+                  <form
+                    id="bulk-folder-action-form"
+                    action="/admin/shared-files/folder-batch"
+                    method="post"
+                    style={{
+                      display: "grid",
+                      gap: 10,
+                      padding: 14,
+                      borderRadius: 16,
+                      border: "1px solid #fed7aa",
+                      background: "#fff7ed",
+                      boxShadow: "inset 0 0 0 1px rgba(254, 215, 170, 0.28)",
+                    }}
+                  >
+                    <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                    <input type="hidden" name="folderId" value={currentFolderRecord?.id || ""} />
+                    <ExplorerStateHiddenFields
+                      redirectFolderId={currentFolderRecord?.id || ""}
+                      q={q}
+                      status={status}
+                      folderSort={folderSort}
+                      fileSort={fileSort}
+                      viewMode={viewMode}
+                    />
+                    <div style={{ fontWeight: 700, color: "#9a3412" }}>批量整理当前目录文件夹</div>
+                    <FolderSelectionToolbar />
+                    <div style={{ display: "grid", gap: 10, gridTemplateColumns: "180px minmax(0, 1fr) auto", alignItems: "center" }}>
+                      <select
+                        name="bulkAction"
+                        defaultValue="MOVE"
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid #fed7aa", background: "#fff" }}
+                      >
+                        <option value="MOVE">批量移动</option>
+                        <option value="DELETE_EMPTY">批量删除空文件夹</option>
+                      </select>
+                      <select
+                        name="targetParentId"
+                        defaultValue={currentFolderRecord?.id || ""}
+                        style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid #fed7aa", background: "#fff" }}
+                      >
+                        {moveTargetOptions.map((option) => (
+                          <option key={option.value || "root"} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      <BulkActionSubmitButton
+                        confirmMessages={{
+                          DELETE_EMPTY: "确定要批量删除选中的空文件夹吗？非空文件夹会被保留。",
+                        }}
+                        style={{ padding: "10px 16px", borderRadius: 999, border: 0, background: "#9a3412", color: "#fff", fontWeight: 700 }}
+                      />
+                    </div>
+                    <div style={{ color: "#7c2d12", fontSize: 13 }}>
+                      只有“批量移动”会使用目标目录；批量删除只会删掉空文件夹，非空文件夹会被自动保留。
+                    </div>
+                  </form>
+                ) : null}
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 14,
+                    gridTemplateColumns: folderGridTemplate,
+                  }}
+                >
                 {folders.map((folder) => {
                   const isEmptyFolder = folder._count.children === 0 && folder._count.files === 0;
                   const folderDeleteHint = isEmptyFolder
@@ -937,6 +1022,22 @@ export default async function SharedFilesPage({
                         boxShadow: isCompact ? "none" : "0 8px 24px rgba(15, 23, 42, 0.04)",
                       }}
                     >
+                      {isManager ? (
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                          <label style={{ display: "inline-flex", alignItems: "center", gap: 8, color: "#6b7280", fontSize: 13 }}>
+                            <input
+                              type="checkbox"
+                              name="folderIds"
+                              value={folder.id}
+                              form="bulk-folder-action-form"
+                              data-folder-state={isEmptyFolder ? "EMPTY" : "FILLED"}
+                              aria-label={`选择文件夹 ${folder.name}`}
+                            />
+                            选择
+                          </label>
+                          <MetaChip label={isEmptyFolder ? "空文件夹" : "有内容"} tone={isEmptyFolder ? "amber" : "slate"} />
+                        </div>
+                      ) : null}
                       <Link
                         href={buildHref({
                           categoryId: activeCategory?.id,
@@ -1051,6 +1152,7 @@ export default async function SharedFilesPage({
                     </div>
                   );
                 })}
+                </div>
               </div>
             ) : (
               <div style={{ padding: 18, borderRadius: 16, border: "1px dashed #d1d5db", color: "#6b7280" }}>

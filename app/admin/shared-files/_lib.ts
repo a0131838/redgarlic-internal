@@ -314,6 +314,119 @@ export async function moveFolderFromForm(formData: FormData) {
   return { successPath: sharedFilesPath(params.toString(), "current-folder-admin") };
 }
 
+export async function applyBulkSharedFolderActionFromForm(formData: FormData) {
+  const redirectState = readSharedFilesRedirectState(formData);
+  const categoryId = text(formData.get("categoryId"));
+  const currentFolderId = text(formData.get("folderId")) || null;
+  const bulkAction = text(formData.get("bulkAction")).toUpperCase();
+  const targetParentId = text(formData.get("targetParentId")) || null;
+  const folderIds = Array.from(
+    new Set(
+      formData
+        .getAll("folderIds")
+        .map((entry) => text(entry))
+        .filter(Boolean),
+    ),
+  );
+
+  if (!categoryId || folderIds.length === 0) {
+    return { error: "请先选择要处理的文件夹" };
+  }
+
+  const folders = await prisma.sharedFolder.findMany({
+    where: {
+      id: { in: folderIds },
+      categoryId,
+      parentId: currentFolderId,
+    },
+    include: {
+      _count: {
+        select: {
+          children: true,
+          files: true,
+        },
+      },
+    },
+  });
+
+  if (folders.length !== folderIds.length) {
+    return { error: "部分文件夹不存在，或已经不在当前目录里了" };
+  }
+
+  if (bulkAction === "MOVE") {
+    if (targetParentId) {
+      const lineage = await ensureFolderInCategory(targetParentId, categoryId);
+      if (!lineage?.length) {
+        return { error: "目标目录不存在" };
+      }
+      if (lineage.some((item) => folderIds.includes(item.id))) {
+        return { error: "不能把选中的文件夹移动到它们自己或子目录里" };
+      }
+    }
+
+    const foldersToMove = folders.filter((folder) => folder.parentId !== targetParentId);
+    if (foldersToMove.length === 0) {
+      const params = buildSharedFilesParams({
+        ...redirectState,
+        categoryId,
+        folderId: currentFolderId,
+        msg: "folder-bulk-move-skipped",
+      });
+      return { successPath: sharedFilesPath(params.toString(), "folder-list") };
+    }
+
+    for (const folder of foldersToMove) {
+      try {
+        await prisma.sharedFolder.update({
+          where: { id: folder.id },
+          data: { parentId: targetParentId },
+        });
+      } catch {
+        return { error: `目标目录中已存在同名文件夹：${folder.name}` };
+      }
+    }
+
+    const skippedCount = folders.length - foldersToMove.length;
+    const params = buildSharedFilesParams({
+      ...redirectState,
+      categoryId,
+      folderId: currentFolderId,
+      msg: `folder-bulk-moved-${foldersToMove.length}-skipped-${skippedCount}`,
+    });
+    return { successPath: sharedFilesPath(params.toString(), "folder-list") };
+  }
+
+  if (bulkAction === "DELETE_EMPTY") {
+    const emptyFolders = folders.filter(
+      (folder) => folder._count.children === 0 && folder._count.files === 0,
+    );
+    if (emptyFolders.length === 0) {
+      const params = buildSharedFilesParams({
+        ...redirectState,
+        categoryId,
+        folderId: currentFolderId,
+        msg: "folder-bulk-delete-skipped",
+      });
+      return { successPath: sharedFilesPath(params.toString(), "folder-list") };
+    }
+
+    await prisma.sharedFolder.deleteMany({
+      where: { id: { in: emptyFolders.map((folder) => folder.id) } },
+    });
+
+    const skippedCount = folders.length - emptyFolders.length;
+    const params = buildSharedFilesParams({
+      ...redirectState,
+      categoryId,
+      folderId: currentFolderId,
+      msg: `folder-bulk-deleted-${emptyFolders.length}-skipped-${skippedCount}`,
+    });
+    return { successPath: sharedFilesPath(params.toString(), "folder-list") };
+  }
+
+  return { error: "不支持的文件夹批量操作" };
+}
+
 export async function deleteFolderFromForm(formData: FormData) {
   const redirectState = readSharedFilesRedirectState(formData);
   const folderId = text(formData.get("folderId"));

@@ -45,6 +45,7 @@
   - bulk selection now feels closer to a desktop file manager with quick-select helpers, invert selection, and clearer current-state chips and filter reset
   - the explorer now uses a more unified management layout with shared action disclosures and a right-side quick-tool strip for common admin actions
   - managers can now recover archived or soft-deleted files in bulk, and deleted files remain selectable for restore workflows
+  - folders now support current-directory multi-select actions, including bulk move and bulk delete for empty folders
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates
