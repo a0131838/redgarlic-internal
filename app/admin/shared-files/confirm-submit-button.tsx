@@ -77,12 +77,21 @@ export function BulkSelectionToolbar({
   );
   const [selectedCount, setSelectedCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [activeCount, setActiveCount] = useState(0);
+  const [archivedCount, setArchivedCount] = useState(0);
 
   useEffect(() => {
     const syncCounts = () => {
       const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(selector));
-      setTotalCount(inputs.length);
+      const selectableInputs = inputs.filter((input) => !input.disabled);
+      setTotalCount(selectableInputs.length);
       setSelectedCount(inputs.filter((input) => input.checked).length);
+      setActiveCount(
+        selectableInputs.filter((input) => (input.dataset.fileStatus || "").toUpperCase() === "ACTIVE").length,
+      );
+      setArchivedCount(
+        selectableInputs.filter((input) => (input.dataset.fileStatus || "").toUpperCase() === "ARCHIVED").length,
+      );
     };
 
     syncCounts();
@@ -90,37 +99,79 @@ export function BulkSelectionToolbar({
     return () => document.removeEventListener("change", syncCounts);
   }, [selector]);
 
-  const setAll = (checked: boolean) => {
+  const updateSelection = (updater: (input: HTMLInputElement) => boolean) => {
     const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(selector));
+    let selected = 0;
+    let selectable = 0;
+    let active = 0;
+    let archived = 0;
+
     for (const input of inputs) {
-      if (!input.disabled) {
-        input.checked = checked;
-      }
+      if (input.disabled) continue;
+      selectable += 1;
+      const status = (input.dataset.fileStatus || "").toUpperCase();
+      if (status === "ACTIVE") active += 1;
+      if (status === "ARCHIVED") archived += 1;
+      input.checked = updater(input);
+      if (input.checked) selected += 1;
     }
-    setSelectedCount(
-      checked ? inputs.filter((input) => !input.disabled).length : 0,
-    );
-    setTotalCount(inputs.length);
+
+    setSelectedCount(selected);
+    setTotalCount(selectable);
+    setActiveCount(active);
+    setArchivedCount(archived);
   };
 
   return (
-    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+    <div style={{ display: "grid", gap: 10 }}>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ color: "#1e3a8a", fontSize: 13, fontWeight: 700 }}>
+          已选 {selectedCount} / {totalCount}
+        </div>
+        <div style={{ color: "#475569", fontSize: 13 }}>
+          可用 {activeCount} 个，已归档 {archivedCount} 个
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
       <button
         type="button"
-        onClick={() => setAll(true)}
+        onClick={() => updateSelection(() => true)}
         style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #bfdbfe", background: "#fff", color: "#1d4ed8" }}
       >
         全选当前页
       </button>
       <button
         type="button"
-        onClick={() => setAll(false)}
+        onClick={() =>
+          updateSelection((input) => (input.dataset.fileStatus || "").toUpperCase() === "ACTIVE")
+        }
+        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #bfdbfe", background: "#fff", color: "#1d4ed8" }}
+      >
+        仅选可用
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          updateSelection((input) => (input.dataset.fileStatus || "").toUpperCase() === "ARCHIVED")
+        }
+        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #bfdbfe", background: "#fff", color: "#1d4ed8" }}
+      >
+        仅选归档
+      </button>
+      <button
+        type="button"
+        onClick={() => updateSelection((input) => !input.checked)}
+        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #d1d5db", background: "#fff", color: "#475569" }}
+      >
+        反选
+      </button>
+      <button
+        type="button"
+        onClick={() => updateSelection(() => false)}
         style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #d1d5db", background: "#fff", color: "#475569" }}
       >
         清空选择
       </button>
-      <div style={{ color: "#475569", fontSize: 13 }}>
-        已选 {selectedCount} / {totalCount}
       </div>
     </div>
   );

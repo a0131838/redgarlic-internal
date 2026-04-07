@@ -38,3 +38,4 @@
 - added a second explorer polish pass with comfortable/compact density modes, current-page select-all tools, and live selected-count feedback for bulk actions
 - preserved explorer search/sort/view state across uploads, moves, deletes, and folder operations so desktop-style workflows do not reset after each action
 - added richer list-mode cues with clickable file/folder sort headers, active sort chips, and stronger row/card status styling in the explorer
+- upgraded batch selection ergonomics with active/archive quick-select tools, invert selection, visible selection totals, and clearer filter-reset/state pills

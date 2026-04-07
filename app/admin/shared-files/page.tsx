@@ -160,6 +160,16 @@ function MetaChip({
   );
 }
 
+function StatusPill({ status }: { status: SharedFileStatus }) {
+  if (status === SharedFileStatus.ACTIVE) {
+    return <MetaChip label="可用" tone="blue" />;
+  }
+  if (status === SharedFileStatus.ARCHIVED) {
+    return <MetaChip label="已归档" tone="slate" />;
+  }
+  return <MetaChip label="待彻底删除" tone="amber" />;
+}
+
 function ExplorerStateHiddenFields({
   redirectFolderId,
   q,
@@ -485,6 +495,14 @@ export default async function SharedFilesPage({
     folders.length > 0 ? `${folders.length} 个子文件夹` : "没有子文件夹";
   const fileCountLabel =
     sortedFiles.length > 0 ? `${sortedFiles.length} 个文件` : "没有文件";
+  const hasFilters = Boolean(q || status);
+  const clearFilterHref = buildHref({
+    categoryId: activeCategory?.id,
+    folderId: currentFolder?.id || undefined,
+    folderSort,
+    fileSort,
+    viewMode,
+  });
 
   const rootHref = buildHref({
     categoryId: activeCategory?.id,
@@ -681,12 +699,31 @@ export default async function SharedFilesPage({
             {currentFolder ? <input type="hidden" name="folderId" value={currentFolder.id} /> : null}
           </form>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
             <MetaChip label={folderCountLabel} />
             <MetaChip label={fileCountLabel} />
             <MetaChip label={describeFolderSort(folderSort)} tone="blue" />
             <MetaChip label={describeFileSort(fileSort)} tone="blue" />
             <MetaChip label={describeViewMode(viewMode)} tone="amber" />
+            {hasFilters ? (
+              <Link
+                href={clearFilterHref}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                  border: "1px solid #fecaca",
+                  background: "#fff5f5",
+                  color: "#991b1b",
+                  textDecoration: "none",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                清空筛选
+              </Link>
+            ) : null}
           </div>
 
           <div
@@ -958,6 +995,7 @@ export default async function SharedFilesPage({
                   borderRadius: 16,
                   border: "1px solid #dbeafe",
                   background: "#eff6ff",
+                  boxShadow: "inset 0 0 0 1px rgba(191, 219, 254, 0.2)",
                 }}
               >
                 <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
@@ -1001,11 +1039,18 @@ export default async function SharedFilesPage({
                 </div>
               </form>
             ) : null}
-            <div style={{ overflowX: "auto", paddingBottom: 4 }}>
+            <div
+              style={{
+                overflowX: "auto",
+                paddingBottom: 4,
+                borderRadius: 18,
+                border: "1px solid #e5e7eb",
+              }}
+            >
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 960 }}>
                 <thead>
                   <tr style={{ textAlign: "left", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>
-                    {isManager ? <th style={{ padding: "12px 8px", width: 52 }}>选择</th> : null}
+                    {isManager ? <th style={{ padding: "12px 8px", width: 52, background: "#f8fafc" }}>选择</th> : null}
                     <th style={{ padding: "12px 8px" }}>
                       <SortHeaderLink
                         href={fileNameSortHref}
@@ -1014,8 +1059,8 @@ export default async function SharedFilesPage({
                         direction={fileSort === "name-desc" ? "desc" : "asc"}
                       />
                     </th>
-                    <th style={{ padding: "12px 8px" }}>状态</th>
-                    <th style={{ padding: "12px 8px" }}>上传人</th>
+                    <th style={{ padding: "12px 8px", background: "#f8fafc" }}>状态</th>
+                    <th style={{ padding: "12px 8px", background: "#f8fafc" }}>上传人</th>
                     <th style={{ padding: "12px 8px" }}>
                       <SortHeaderLink
                         href={fileSizeSortHref}
@@ -1032,7 +1077,7 @@ export default async function SharedFilesPage({
                         direction={fileSort === "oldest" ? "asc" : "desc"}
                       />
                     </th>
-                    {isManager ? <th style={{ padding: "12px 8px" }}>操作</th> : null}
+                    {isManager ? <th style={{ padding: "12px 8px", background: "#f8fafc" }}>操作</th> : null}
                   </tr>
                 </thead>
                 <tbody>
@@ -1056,6 +1101,7 @@ export default async function SharedFilesPage({
                             form="bulk-file-move-form"
                             disabled={file.status === SharedFileStatus.DELETED}
                             className="bulk-file-checkbox"
+                            data-file-status={file.status}
                             aria-label={`选择文件 ${file.title}`}
                           />
                         </td>
@@ -1063,12 +1109,7 @@ export default async function SharedFilesPage({
                       <td style={{ padding: rowPadding }}>
                         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                           <div style={{ fontWeight: 700, fontSize: isCompact ? 14 : 16 }}>{file.title}</div>
-                          {file.status === SharedFileStatus.ARCHIVED ? (
-                            <MetaChip label="已归档" tone="slate" />
-                          ) : null}
-                          {file.status === SharedFileStatus.DELETED ? (
-                            <MetaChip label="待彻底删除" tone="amber" />
-                          ) : null}
+                          {file.status !== SharedFileStatus.ACTIVE ? <StatusPill status={file.status} /> : null}
                         </div>
                         <div style={{ color: "#6b7280", fontSize: 13 }}>{file.originalFileName}</div>
                         {file.remarks ? <div style={{ marginTop: 6, color: "#4b5563", fontSize: 13 }}>{file.remarks}</div> : null}
@@ -1079,7 +1120,9 @@ export default async function SharedFilesPage({
                           <a href={`/api/admin/shared-files/${file.id}?download=1`}>下载</a>
                         </div>
                       </td>
-                      <td style={{ padding: rowPadding }}>{file.status}</td>
+                      <td style={{ padding: rowPadding }}>
+                        <StatusPill status={file.status} />
+                      </td>
                       <td style={{ padding: rowPadding }}>
                         <div>{file.uploader.name}</div>
                         <div style={{ color: "#6b7280", fontSize: 13 }}>{file.uploader.email}</div>
