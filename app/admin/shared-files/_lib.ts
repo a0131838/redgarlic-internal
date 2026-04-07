@@ -713,17 +713,34 @@ export async function applyBulkSharedFileActionFromForm(
     return { successPath: sharedFilesPath(params.toString(), "file-list") };
   }
 
-  if (bulkAction === "ARCHIVE" || bulkAction === "DELETE") {
+  if (bulkAction === "ARCHIVE" || bulkAction === "DELETE" || bulkAction === "RESTORE") {
     const nextStatus =
-      bulkAction === "ARCHIVE" ? SharedFileStatus.ARCHIVED : SharedFileStatus.DELETED;
-    const filesToUpdate = files.filter((file) => file.status !== nextStatus && file.status !== SharedFileStatus.DELETED);
+      bulkAction === "ARCHIVE"
+        ? SharedFileStatus.ARCHIVED
+        : bulkAction === "DELETE"
+          ? SharedFileStatus.DELETED
+          : SharedFileStatus.ACTIVE;
+    const filesToUpdate = files.filter((file) => {
+      if (bulkAction === "ARCHIVE") {
+        return file.status !== SharedFileStatus.ARCHIVED && file.status !== SharedFileStatus.DELETED;
+      }
+      if (bulkAction === "DELETE") {
+        return file.status !== SharedFileStatus.DELETED;
+      }
+      return file.status !== SharedFileStatus.ACTIVE;
+    });
 
     if (filesToUpdate.length === 0) {
       const params = buildSharedFilesParams({
         ...redirectState,
         categoryId,
         folderId: currentFolderId,
-        msg: bulkAction === "ARCHIVE" ? "file-bulk-archive-skipped" : "file-bulk-delete-skipped",
+        msg:
+          bulkAction === "ARCHIVE"
+            ? "file-bulk-archive-skipped"
+            : bulkAction === "DELETE"
+              ? "file-bulk-delete-skipped"
+              : "file-bulk-restore-skipped",
       });
       return { successPath: sharedFilesPath(params.toString(), "file-list") };
     }
@@ -735,7 +752,10 @@ export async function applyBulkSharedFileActionFromForm(
           data: {
             status: nextStatus,
             archivedAt: nextStatus === SharedFileStatus.ARCHIVED ? new Date() : null,
-            archivedByEmail: actor.email,
+            archivedByEmail:
+              nextStatus === SharedFileStatus.ARCHIVED || nextStatus === SharedFileStatus.DELETED
+                ? actor.email
+                : null,
           },
         });
       }
@@ -758,7 +778,9 @@ export async function applyBulkSharedFileActionFromForm(
       msg:
         bulkAction === "ARCHIVE"
           ? `file-bulk-archived-${filesToUpdate.length}`
-          : `file-bulk-deleted-${filesToUpdate.length}`,
+          : bulkAction === "DELETE"
+            ? `file-bulk-deleted-${filesToUpdate.length}`
+            : `file-bulk-restored-${filesToUpdate.length}`,
     });
     return { successPath: sharedFilesPath(params.toString(), "file-list") };
   }

@@ -45,3 +45,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - strengthen the desktop list mode with direct sort affordances and clearer visual status cues instead of relying only on filter dropdowns
 - make multi-file selection feel more like a desktop cleanup workflow with quick-select helpers, visible counts, and simpler filter reset controls
 - unify the explorer management surfaces so file rows, folder cards, and the right rail share the same action language and quicker navigation hooks
+- close the file-cleanup loop with restore actions so archive/delete flows are reversible both per-file and in bulk

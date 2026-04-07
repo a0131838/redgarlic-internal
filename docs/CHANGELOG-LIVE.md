@@ -40,3 +40,4 @@
 - added richer list-mode cues with clickable file/folder sort headers, active sort chips, and stronger row/card status styling in the explorer
 - upgraded batch selection ergonomics with active/archive quick-select tools, invert selection, visible selection totals, and clearer filter-reset/state pills
 - unified explorer action panels with shared disclosure styling, a right-rail quick-tool strip, and consistent management cards for folder/file operations
+- completed the cleanup loop with bulk restore-to-active support, single-file recovery from deleted state, and deleted-file selection tools in the explorer

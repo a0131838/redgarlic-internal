@@ -436,6 +436,7 @@ function humanizeFeedbackMessage(msg: string) {
   if (msg === "file-bulk-move-skipped") return "选中的文件已经都在目标目录里。";
   if (msg === "file-bulk-archive-skipped") return "选中的文件已经都处于归档状态。";
   if (msg === "file-bulk-delete-skipped") return "选中的文件已经都标记删除了。";
+  if (msg === "file-bulk-restore-skipped") return "选中的文件已经都是可用状态了。";
   if (msg === "deleted-permanently") return "文件已从系统和存储中彻底删除。";
   if (msg === "status-active") return "文件已恢复为可用状态。";
   if (msg === "status-archived") return "文件已归档。";
@@ -449,6 +450,9 @@ function humanizeFeedbackMessage(msg: string) {
 
   const bulkDeleted = msg.match(/^file-bulk-deleted-(\d+)$/);
   if (bulkDeleted) return `已批量标记删除 ${bulkDeleted[1]} 个文件。`;
+
+  const bulkRestored = msg.match(/^file-bulk-restored-(\d+)$/);
+  if (bulkRestored) return `已批量恢复 ${bulkRestored[1]} 个文件为可用状态。`;
 
   return msg.replace(/-/g, " ");
 }
@@ -1102,6 +1106,7 @@ export default async function SharedFilesPage({
                   >
                     <option value="MOVE">批量移动</option>
                     <option value="ARCHIVE">批量归档</option>
+                    <option value="RESTORE">批量恢复为可用</option>
                     <option value="DELETE">批量标记删除</option>
                   </select>
                   <select
@@ -1120,7 +1125,7 @@ export default async function SharedFilesPage({
                   />
                 </div>
                 <div style={{ color: "#475569", fontSize: 13 }}>
-                  先在下方勾选文件。只有“批量移动”会使用目标目录，归档和标记删除会忽略右侧目录选择。
+                  先在下方勾选文件。只有“批量移动”会使用目标目录，其余动作会忽略右侧目录选择。
                 </div>
               </form>
             ) : null}
@@ -1184,7 +1189,6 @@ export default async function SharedFilesPage({
                             name="fileIds"
                             value={file.id}
                             form="bulk-file-move-form"
-                            disabled={file.status === SharedFileStatus.DELETED}
                             className="bulk-file-checkbox"
                             data-file-status={file.status}
                             aria-label={`选择文件 ${file.title}`}
@@ -1282,7 +1286,7 @@ export default async function SharedFilesPage({
                             </form>
                             <ActionDisclosure>
                               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                {file.status !== SharedFileStatus.ARCHIVED ? (
+                                {file.status === SharedFileStatus.ACTIVE ? (
                                   <form action="/admin/shared-files/status" method="post">
                                     <input type="hidden" name="fileId" value={file.id} />
                                     <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
@@ -1315,7 +1319,7 @@ export default async function SharedFilesPage({
                                       viewMode={viewMode}
                                     />
                                     <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
-                                      恢复
+                                      恢复为可用
                                     </button>
                                   </form>
                                 )}

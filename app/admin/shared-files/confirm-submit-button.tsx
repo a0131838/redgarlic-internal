@@ -59,6 +59,13 @@ export function BulkActionSubmitButton({
             event.preventDefault();
           }
         }
+
+        if (actionValue === "RESTORE") {
+          const confirmed = window.confirm("确定要把选中的文件批量恢复为可用状态吗？已归档和已标记删除的文件都会恢复。");
+          if (!confirmed) {
+            event.preventDefault();
+          }
+        }
       }}
     >
       执行批量操作
@@ -79,6 +86,7 @@ export function BulkSelectionToolbar({
   const [totalCount, setTotalCount] = useState(0);
   const [activeCount, setActiveCount] = useState(0);
   const [archivedCount, setArchivedCount] = useState(0);
+  const [deletedCount, setDeletedCount] = useState(0);
 
   useEffect(() => {
     const syncCounts = () => {
@@ -91,6 +99,9 @@ export function BulkSelectionToolbar({
       );
       setArchivedCount(
         selectableInputs.filter((input) => (input.dataset.fileStatus || "").toUpperCase() === "ARCHIVED").length,
+      );
+      setDeletedCount(
+        selectableInputs.filter((input) => (input.dataset.fileStatus || "").toUpperCase() === "DELETED").length,
       );
     };
 
@@ -105,6 +116,7 @@ export function BulkSelectionToolbar({
     let selectable = 0;
     let active = 0;
     let archived = 0;
+    let deleted = 0;
 
     for (const input of inputs) {
       if (input.disabled) continue;
@@ -112,6 +124,7 @@ export function BulkSelectionToolbar({
       const status = (input.dataset.fileStatus || "").toUpperCase();
       if (status === "ACTIVE") active += 1;
       if (status === "ARCHIVED") archived += 1;
+      if (status === "DELETED") deleted += 1;
       input.checked = updater(input);
       if (input.checked) selected += 1;
     }
@@ -120,6 +133,7 @@ export function BulkSelectionToolbar({
     setTotalCount(selectable);
     setActiveCount(active);
     setArchivedCount(archived);
+    setDeletedCount(deleted);
   };
 
   return (
@@ -129,7 +143,7 @@ export function BulkSelectionToolbar({
           已选 {selectedCount} / {totalCount}
         </div>
         <div style={{ color: "#475569", fontSize: 13 }}>
-          可用 {activeCount} 个，已归档 {archivedCount} 个
+          可用 {activeCount} 个，已归档 {archivedCount} 个，待删除 {deletedCount} 个
         </div>
       </div>
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -157,6 +171,15 @@ export function BulkSelectionToolbar({
         style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #bfdbfe", background: "#fff", color: "#1d4ed8" }}
       >
         仅选归档
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          updateSelection((input) => (input.dataset.fileStatus || "").toUpperCase() === "DELETED")
+        }
+        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #fed7aa", background: "#fff7ed", color: "#9a3412" }}
+      >
+        仅选待删除
       </button>
       <button
         type="button"
