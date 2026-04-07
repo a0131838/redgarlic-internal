@@ -69,6 +69,97 @@ const viewModeOptions: Array<{ value: ViewMode; label: string }> = [
   { value: "compact", label: "紧凑视图" },
 ];
 
+function nextToggleSort<T extends string>(current: T, primary: T, secondary: T) {
+  return current === primary ? secondary : primary;
+}
+
+function sortArrow(active: boolean, direction: "asc" | "desc") {
+  if (!active) return "↕";
+  return direction === "asc" ? "↑" : "↓";
+}
+
+function describeFolderSort(sort: FolderSort) {
+  if (sort === "name-desc") return "文件夹按名称倒序";
+  if (sort === "newest") return "文件夹按创建时间最新";
+  if (sort === "oldest") return "文件夹按创建时间最早";
+  return "文件夹按名称正序";
+}
+
+function describeFileSort(sort: FileSort) {
+  if (sort === "oldest") return "文件按时间最早";
+  if (sort === "name-asc") return "文件按名称正序";
+  if (sort === "name-desc") return "文件按名称倒序";
+  if (sort === "size-desc") return "文件按大小从大到小";
+  if (sort === "size-asc") return "文件按大小从小到大";
+  return "文件按时间最新";
+}
+
+function describeViewMode(viewMode: ViewMode) {
+  return viewMode === "compact" ? "紧凑视图" : "舒适视图";
+}
+
+function SortHeaderLink({
+  href,
+  label,
+  active,
+  direction,
+}: {
+  href: string;
+  label: string;
+  active: boolean;
+  direction: "asc" | "desc";
+}) {
+  return (
+    <Link
+      href={href}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        color: active ? "#111827" : "#6b7280",
+        textDecoration: "none",
+        fontWeight: active ? 700 : 600,
+      }}
+    >
+      <span>{label}</span>
+      <span style={{ fontSize: 12 }}>{sortArrow(active, direction)}</span>
+    </Link>
+  );
+}
+
+function MetaChip({
+  label,
+  tone = "slate",
+}: {
+  label: string;
+  tone?: "slate" | "blue" | "amber";
+}) {
+  const palette =
+    tone === "blue"
+      ? { background: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" }
+      : tone === "amber"
+        ? { background: "#fff7ed", color: "#9a3412", border: "#fed7aa" }
+        : { background: "#f8fafc", color: "#475569", border: "#e2e8f0" };
+
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "6px 10px",
+        borderRadius: 999,
+        border: `1px solid ${palette.border}`,
+        background: palette.background,
+        color: palette.color,
+        fontSize: 12,
+        fontWeight: 600,
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
 function ExplorerStateHiddenFields({
   redirectFolderId,
   q,
@@ -361,6 +452,39 @@ export default async function SharedFilesPage({
   const currentFolderMoveOptions = currentFolderRecord
     ? [{ value: "", label: "根目录" }, ...buildFolderOptions(allFolders, null, 0, [], collectDescendantIds(allFolders, currentFolderRecord.id))]
     : [];
+  const baseExplorerParams = {
+    categoryId: activeCategory?.id,
+    folderId: currentFolder?.id || undefined,
+    q,
+    status,
+    folderSort,
+    fileSort,
+    viewMode,
+  };
+  const folderNameSortHref = buildHref({
+    ...baseExplorerParams,
+    folderSort: nextToggleSort(folderSort, "name-asc", "name-desc"),
+  });
+  const folderTimeSortHref = buildHref({
+    ...baseExplorerParams,
+    folderSort: nextToggleSort(folderSort, "newest", "oldest"),
+  });
+  const fileNameSortHref = buildHref({
+    ...baseExplorerParams,
+    fileSort: nextToggleSort(fileSort, "name-asc", "name-desc"),
+  });
+  const fileSizeSortHref = buildHref({
+    ...baseExplorerParams,
+    fileSort: nextToggleSort(fileSort, "size-desc", "size-asc"),
+  });
+  const fileTimeSortHref = buildHref({
+    ...baseExplorerParams,
+    fileSort: nextToggleSort(fileSort, "newest", "oldest"),
+  });
+  const folderCountLabel =
+    folders.length > 0 ? `${folders.length} 个子文件夹` : "没有子文件夹";
+  const fileCountLabel =
+    sortedFiles.length > 0 ? `${sortedFiles.length} 个文件` : "没有文件";
 
   const rootHref = buildHref({
     categoryId: activeCategory?.id,
@@ -557,6 +681,14 @@ export default async function SharedFilesPage({
             {currentFolder ? <input type="hidden" name="folderId" value={currentFolder.id} /> : null}
           </form>
 
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <MetaChip label={folderCountLabel} />
+            <MetaChip label={fileCountLabel} />
+            <MetaChip label={describeFolderSort(folderSort)} tone="blue" />
+            <MetaChip label={describeFileSort(fileSort)} tone="blue" />
+            <MetaChip label={describeViewMode(viewMode)} tone="amber" />
+          </div>
+
           <div
             style={{
               display: "flex",
@@ -591,9 +723,27 @@ export default async function SharedFilesPage({
           </div>
 
           <section style={{ display: "grid", gap: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center" }}>
-              <h2 style={{ margin: 0, fontSize: 18 }}>当前目录</h2>
-              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ display: "grid", gap: 6 }}>
+                <h2 style={{ margin: 0, fontSize: 18 }}>当前目录</h2>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <MetaChip label={folderCountLabel} />
+                  <MetaChip label={describeFolderSort(folderSort)} tone="blue" />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+                <SortHeaderLink
+                  href={folderNameSortHref}
+                  label="按名称"
+                  active={folderSort === "name-asc" || folderSort === "name-desc"}
+                  direction={folderSort === "name-desc" ? "desc" : "asc"}
+                />
+                <SortHeaderLink
+                  href={folderTimeSortHref}
+                  label="按时间"
+                  active={folderSort === "newest" || folderSort === "oldest"}
+                  direction={folderSort === "oldest" ? "asc" : "desc"}
+                />
                 {currentFolder ? (
                   <Link href={parentFolderHref} style={{ color: "#1d4ed8", textDecoration: "none", fontSize: 14 }}>
                     返回上一级
@@ -639,6 +789,7 @@ export default async function SharedFilesPage({
                         padding: isCompact ? 14 : 18,
                         color: "#111827",
                         scrollMarginTop: 24,
+                        boxShadow: isCompact ? "none" : "0 8px 24px rgba(15, 23, 42, 0.04)",
                       }}
                     >
                       <Link
@@ -783,7 +934,18 @@ export default async function SharedFilesPage({
           </section>
 
           <section style={{ display: "grid", gap: 12 }}>
-            <h2 style={{ margin: 0, fontSize: 18 }}>文件</h2>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ display: "grid", gap: 6 }}>
+                <h2 style={{ margin: 0, fontSize: 18 }}>文件</h2>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <MetaChip label={fileCountLabel} />
+                  <MetaChip label={describeFileSort(fileSort)} tone="blue" />
+                </div>
+              </div>
+              <div style={{ color: "#64748b", fontSize: 13 }}>
+                直接点击列表列头也可以切换常用排序。
+              </div>
+            </div>
             {isManager && files.length > 0 ? (
               <form
                 id="bulk-file-move-form"
@@ -844,11 +1006,32 @@ export default async function SharedFilesPage({
                 <thead>
                   <tr style={{ textAlign: "left", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>
                     {isManager ? <th style={{ padding: "12px 8px", width: 52 }}>选择</th> : null}
-                    <th style={{ padding: "12px 8px" }}>文件</th>
+                    <th style={{ padding: "12px 8px" }}>
+                      <SortHeaderLink
+                        href={fileNameSortHref}
+                        label="文件"
+                        active={fileSort === "name-asc" || fileSort === "name-desc"}
+                        direction={fileSort === "name-desc" ? "desc" : "asc"}
+                      />
+                    </th>
                     <th style={{ padding: "12px 8px" }}>状态</th>
                     <th style={{ padding: "12px 8px" }}>上传人</th>
-                    <th style={{ padding: "12px 8px" }}>大小</th>
-                    <th style={{ padding: "12px 8px" }}>时间</th>
+                    <th style={{ padding: "12px 8px" }}>
+                      <SortHeaderLink
+                        href={fileSizeSortHref}
+                        label="大小"
+                        active={fileSort === "size-desc" || fileSort === "size-asc"}
+                        direction={fileSort === "size-asc" ? "asc" : "desc"}
+                      />
+                    </th>
+                    <th style={{ padding: "12px 8px" }}>
+                      <SortHeaderLink
+                        href={fileTimeSortHref}
+                        label="时间"
+                        active={fileSort === "newest" || fileSort === "oldest"}
+                        direction={fileSort === "oldest" ? "asc" : "desc"}
+                      />
+                    </th>
                     {isManager ? <th style={{ padding: "12px 8px" }}>操作</th> : null}
                   </tr>
                 </thead>
@@ -857,7 +1040,12 @@ export default async function SharedFilesPage({
                     <tr
                       id={`file-${file.id}`}
                       key={file.id}
-                      style={{ borderBottom: "1px solid #f1f5f9", verticalAlign: "top", scrollMarginTop: 24 }}
+                      style={{
+                        borderBottom: "1px solid #f1f5f9",
+                        verticalAlign: "top",
+                        scrollMarginTop: 24,
+                        background: file.status === SharedFileStatus.DELETED ? "#fff7f7" : "#fff",
+                      }}
                     >
                       {isManager ? (
                         <td style={{ padding: rowPadding }}>
@@ -873,7 +1061,15 @@ export default async function SharedFilesPage({
                         </td>
                       ) : null}
                       <td style={{ padding: rowPadding }}>
-                        <div style={{ fontWeight: 700, fontSize: isCompact ? 14 : 16 }}>{file.title}</div>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                          <div style={{ fontWeight: 700, fontSize: isCompact ? 14 : 16 }}>{file.title}</div>
+                          {file.status === SharedFileStatus.ARCHIVED ? (
+                            <MetaChip label="已归档" tone="slate" />
+                          ) : null}
+                          {file.status === SharedFileStatus.DELETED ? (
+                            <MetaChip label="待彻底删除" tone="amber" />
+                          ) : null}
+                        </div>
                         <div style={{ color: "#6b7280", fontSize: 13 }}>{file.originalFileName}</div>
                         {file.remarks ? <div style={{ marginTop: 6, color: "#4b5563", fontSize: 13 }}>{file.remarks}</div> : null}
                         <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>

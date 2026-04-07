@@ -42,3 +42,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - ship a bundled explorer polish pass with sorting controls, stronger path navigation, and confirmation prompts for dangerous actions
 - follow with a second bundled polish pass that improves density control and current-page bulk-selection ergonomics
 - keep explorer mutations inside the user's current search/sort/view context so the desktop-style flow feels continuous during cleanup work
+- strengthen the desktop list mode with direct sort affordances and clearer visual status cues instead of relying only on filter dropdowns

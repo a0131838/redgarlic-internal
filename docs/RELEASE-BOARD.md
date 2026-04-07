@@ -41,6 +41,7 @@
   - the explorer now supports independent folder/file sort modes, clearer “up one level” path navigation, and confirm dialogs for destructive file/folder actions
   - the explorer now offers comfortable/compact density modes plus current-page select-all and selected-count feedback in the batch toolbar
   - explorer actions now keep the active search, sort, and density context instead of resetting the view after each mutation
+  - the explorer now behaves more like a desktop list view with clickable sort headers, visible active-sort chips, and clearer archived/deleted state styling
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates
