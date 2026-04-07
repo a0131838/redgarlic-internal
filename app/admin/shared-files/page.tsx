@@ -653,52 +653,71 @@ export default async function SharedFilesPage({
                                 移动
                               </button>
                             </form>
-                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                              {file.status !== SharedFileStatus.ARCHIVED ? (
-                                <form action="/admin/shared-files/status" method="post">
-                                  <input type="hidden" name="fileId" value={file.id} />
-                                  <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
-                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                  <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
-                                    归档
-                                  </button>
-                                </form>
-                              ) : (
-                                <form action="/admin/shared-files/status" method="post">
-                                  <input type="hidden" name="fileId" value={file.id} />
-                                  <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
-                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                  <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
-                                    恢复
-                                  </button>
-                                </form>
-                              )}
-                              {file.status !== SharedFileStatus.DELETED ? (
-                                <form action="/admin/shared-files/status" method="post">
-                                  <input type="hidden" name="fileId" value={file.id} />
-                                  <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
-                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                  <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #fecaca", color: "#991b1b", background: "#fff5f5" }}>
-                                    标记删除
-                                  </button>
-                                </form>
-                              ) : (
-                                <form action="/admin/shared-files/delete" method="post">
-                                  <input type="hidden" name="fileId" value={file.id} />
-                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                  <button
-                                    type="submit"
-                                    style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
-                                  >
-                                    彻底删除
-                                  </button>
-                                </form>
-                              )}
-                            </div>
+                            <details
+                              style={{
+                                border: "1px solid #e5e7eb",
+                                borderRadius: 12,
+                                background: "#f8fafc",
+                                padding: "8px 10px",
+                              }}
+                            >
+                              <summary
+                                style={{
+                                  cursor: "pointer",
+                                  fontWeight: 700,
+                                  color: "#334155",
+                                  listStyle: "none",
+                                }}
+                              >
+                                更多操作
+                              </summary>
+                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
+                                {file.status !== SharedFileStatus.ARCHIVED ? (
+                                  <form action="/admin/shared-files/status" method="post">
+                                    <input type="hidden" name="fileId" value={file.id} />
+                                    <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
+                                    <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                    <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                    <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
+                                      归档
+                                    </button>
+                                  </form>
+                                ) : (
+                                  <form action="/admin/shared-files/status" method="post">
+                                    <input type="hidden" name="fileId" value={file.id} />
+                                    <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
+                                    <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                    <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                    <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
+                                      恢复
+                                    </button>
+                                  </form>
+                                )}
+                                {file.status !== SharedFileStatus.DELETED ? (
+                                  <form action="/admin/shared-files/status" method="post">
+                                    <input type="hidden" name="fileId" value={file.id} />
+                                    <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
+                                    <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                    <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                    <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #fecaca", color: "#991b1b", background: "#fff5f5" }}>
+                                      标记删除
+                                    </button>
+                                  </form>
+                                ) : (
+                                  <form action="/admin/shared-files/delete" method="post">
+                                    <input type="hidden" name="fileId" value={file.id} />
+                                    <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                    <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                    <button
+                                      type="submit"
+                                      style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
+                                    >
+                                      彻底删除
+                                    </button>
+                                  </form>
+                                )}
+                              </div>
+                            </details>
                           </div>
                         </td>
                       ) : null}
