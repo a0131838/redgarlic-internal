@@ -19,6 +19,7 @@
   - deleted files can now be permanently removed from storage and the database after a soft delete
   - the right-side upload and category cards keep their own height even when the left file table becomes very long
   - the desktop split now prioritizes the file table width while keeping the upload rail fixed and sticky
+  - shared-file form redirects now rebuild their origin from proxy headers, preventing localhost bounce-backs
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

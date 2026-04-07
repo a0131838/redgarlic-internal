@@ -7,7 +7,7 @@ import {
 } from "../_lib";
 
 export async function POST(request: Request) {
-  const auth = await requireManagerForRoute(request.url);
+  const auth = await requireManagerForRoute(request);
   if (!("employee" in auth)) {
     return NextResponse.redirect(auth.redirectTo);
   }
@@ -21,9 +21,9 @@ export async function POST(request: Request) {
 
   if (!("successQuery" in result)) {
     return NextResponse.redirect(
-      redirectUrl(request.url, `/admin/shared-files?err=${encodeURIComponent(result.error)}`),
+      redirectUrl(request, `/admin/shared-files?err=${encodeURIComponent(result.error)}`),
     );
   }
 
-  return NextResponse.redirect(redirectUrl(request.url, `/admin/shared-files?${result.successQuery}`));
+  return NextResponse.redirect(redirectUrl(request, `/admin/shared-files?${result.successQuery}`));
 }

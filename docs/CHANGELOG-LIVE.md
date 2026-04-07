@@ -15,3 +15,4 @@
 - added a permanent delete flow that removes already-marked files from both storage and the database
 - fixed the shared-file two-column layout so the right-side forms no longer stretch when the file list gets long
 - widened the shared-file desktop layout so the left table can show management actions without squeezing behind the upload rail
+- corrected shared-file POST redirects so reverse-proxied requests return to the real domain instead of localhost

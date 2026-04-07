@@ -12,8 +12,21 @@ function enc(value: string) {
   return encodeURIComponent(value);
 }
 
-export function redirectUrl(baseUrl: string, path: string) {
-  return new URL(path, baseUrl);
+function requestOrigin(request: Request) {
+  const fallback = new URL(request.url);
+  const host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    fallback.host;
+  const protocol =
+    request.headers.get("x-forwarded-proto") ||
+    fallback.protocol.replace(/:$/, "");
+
+  return `${protocol}://${host}`;
+}
+
+export function redirectUrl(request: Request, path: string) {
+  return new URL(path, requestOrigin(request));
 }
 
 type RouteManagerAuth =
@@ -24,16 +37,16 @@ type RouteManagerAuth =
       redirectTo: URL;
     };
 
-export async function requireManagerForRoute(baseUrl: string): Promise<RouteManagerAuth> {
+export async function requireManagerForRoute(request: Request): Promise<RouteManagerAuth> {
   const employee = await getCurrentEmployee();
   if (!employee) {
     return {
-      redirectTo: redirectUrl(baseUrl, "/admin/login"),
+      redirectTo: redirectUrl(request, "/admin/login"),
     };
   }
   if (employee.role !== EmployeeRole.OWNER && employee.role !== EmployeeRole.ADMIN) {
     return {
-      redirectTo: redirectUrl(baseUrl, "/admin/shared-files?err=permission-denied"),
+      redirectTo: redirectUrl(request, "/admin/shared-files?err=permission-denied"),
     };
   }
   return { employee };
