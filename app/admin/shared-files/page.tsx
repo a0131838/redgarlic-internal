@@ -393,6 +393,9 @@ export default async function SharedFilesPage({
               >
                 {folders.map((folder) => {
                   const isEmptyFolder = folder._count.children === 0 && folder._count.files === 0;
+                  const folderDeleteHint = isEmptyFolder
+                    ? "当前文件夹为空，可以直接删除。"
+                    : `还包含 ${folder._count.children} 个子文件夹、${folder._count.files} 个文件，暂时不能删除。`;
                   return (
                     <div
                       key={folder.id}
@@ -483,6 +486,9 @@ export default async function SharedFilesPage({
                             >
                               {isEmptyFolder ? "删除空文件夹" : "含内容，不能删除"}
                             </button>
+                            <div style={{ marginTop: 6, color: isEmptyFolder ? "#166534" : "#6b7280", fontSize: 12, lineHeight: 1.5 }}>
+                              {folderDeleteHint}
+                            </div>
                           </form>
                         </div>
                       ) : null}
@@ -591,8 +597,12 @@ export default async function SharedFilesPage({
                       <td style={{ padding: "14px 8px", color: "#4b5563", fontSize: 13 }}>{formatTime(file.createdAt)}</td>
                       {isManager ? (
                         <td style={{ padding: "14px 8px" }}>
-                          <div style={{ display: "grid", gap: 8 }}>
-                            <form action="/admin/shared-files/rename" method="post" style={{ display: "grid", gap: 8 }}>
+                          <div style={{ display: "grid", gap: 10, minWidth: 280 }}>
+                            <form
+                              action="/admin/shared-files/rename"
+                              method="post"
+                              style={{ display: "grid", gap: 8, gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center" }}
+                            >
                               <input type="hidden" name="fileId" value={file.id} />
                               <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                               <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
@@ -604,12 +614,16 @@ export default async function SharedFilesPage({
                               />
                               <button
                                 type="submit"
-                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                                style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff", whiteSpace: "nowrap" }}
                               >
-                                重命名文件
+                                重命名
                               </button>
                             </form>
-                            <form action="/admin/shared-files/move" method="post" style={{ display: "grid", gap: 8 }}>
+                            <form
+                              action="/admin/shared-files/move"
+                              method="post"
+                              style={{ display: "grid", gap: 8, gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center" }}
+                            >
                               <input type="hidden" name="fileId" value={file.id} />
                               <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
                               <select
@@ -625,55 +639,57 @@ export default async function SharedFilesPage({
                               </select>
                               <button
                                 type="submit"
-                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #bfdbfe", color: "#1d4ed8", background: "#eff6ff" }}
+                                style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #bfdbfe", color: "#1d4ed8", background: "#eff6ff", whiteSpace: "nowrap" }}
                               >
-                                移动文件
+                                移动
                               </button>
                             </form>
-                            {file.status !== SharedFileStatus.ARCHIVED ? (
-                              <form action="/admin/shared-files/status" method="post">
-                                <input type="hidden" name="fileId" value={file.id} />
-                                <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
-                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
-                                  归档
-                                </button>
-                              </form>
-                            ) : (
-                              <form action="/admin/shared-files/status" method="post">
-                                <input type="hidden" name="fileId" value={file.id} />
-                                <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
-                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
-                                  恢复
-                                </button>
-                              </form>
-                            )}
-                            {file.status !== SharedFileStatus.DELETED ? (
-                              <form action="/admin/shared-files/status" method="post">
-                                <input type="hidden" name="fileId" value={file.id} />
-                                <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
-                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                <button type="submit" style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #fecaca", color: "#991b1b", background: "#fff5f5" }}>
-                                  标记删除
-                                </button>
-                              </form>
-                            ) : (
-                              <form action="/admin/shared-files/delete" method="post">
-                                <input type="hidden" name="fileId" value={file.id} />
-                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                <button
-                                  type="submit"
-                                  style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
-                                >
-                                  彻底删除
-                                </button>
-                              </form>
-                            )}
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                              {file.status !== SharedFileStatus.ARCHIVED ? (
+                                <form action="/admin/shared-files/status" method="post">
+                                  <input type="hidden" name="fileId" value={file.id} />
+                                  <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
+                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                  <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
+                                    归档
+                                  </button>
+                                </form>
+                              ) : (
+                                <form action="/admin/shared-files/status" method="post">
+                                  <input type="hidden" name="fileId" value={file.id} />
+                                  <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
+                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                  <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
+                                    恢复
+                                  </button>
+                                </form>
+                              )}
+                              {file.status !== SharedFileStatus.DELETED ? (
+                                <form action="/admin/shared-files/status" method="post">
+                                  <input type="hidden" name="fileId" value={file.id} />
+                                  <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
+                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                  <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #fecaca", color: "#991b1b", background: "#fff5f5" }}>
+                                    标记删除
+                                  </button>
+                                </form>
+                              ) : (
+                                <form action="/admin/shared-files/delete" method="post">
+                                  <input type="hidden" name="fileId" value={file.id} />
+                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                  <button
+                                    type="submit"
+                                    style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
+                                  >
+                                    彻底删除
+                                  </button>
+                                </form>
+                              )}
+                            </div>
                           </div>
                         </td>
                       ) : null}
@@ -695,6 +711,13 @@ export default async function SharedFilesPage({
         {isManager ? (
           <div style={{ display: "grid", gap: 16, alignContent: "start", alignSelf: "start", position: "sticky", top: 20 }}>
             {currentFolderRecord ? (
+              (() => {
+                const currentFolderIsEmpty =
+                  currentFolderRecord._count.children === 0 && currentFolderRecord._count.files === 0;
+                const currentFolderDeleteHint = currentFolderIsEmpty
+                  ? "当前文件夹为空，可以直接删除。"
+                  : `当前文件夹下还有 ${currentFolderRecord._count.children} 个子文件夹、${currentFolderRecord._count.files} 个文件。`;
+                return (
               <section
                 id="current-folder-admin"
                 style={{
@@ -761,26 +784,26 @@ export default async function SharedFilesPage({
                   <input type="hidden" name="focusId" value="file-list" />
                   <button
                     type="submit"
-                    disabled={currentFolderRecord._count.children > 0 || currentFolderRecord._count.files > 0}
+                    disabled={!currentFolderIsEmpty}
                     style={{
                       width: "100%",
                       padding: "12px 16px",
                       borderRadius: 999,
                       border: "1px solid #fecaca",
-                      background:
-                        currentFolderRecord._count.children === 0 && currentFolderRecord._count.files === 0 ? "#fff5f5" : "#f8fafc",
-                      color:
-                        currentFolderRecord._count.children === 0 && currentFolderRecord._count.files === 0 ? "#991b1b" : "#94a3b8",
-                      cursor:
-                        currentFolderRecord._count.children === 0 && currentFolderRecord._count.files === 0 ? "pointer" : "not-allowed",
+                      background: currentFolderIsEmpty ? "#fff5f5" : "#f8fafc",
+                      color: currentFolderIsEmpty ? "#991b1b" : "#94a3b8",
+                      cursor: currentFolderIsEmpty ? "pointer" : "not-allowed",
                     }}
                   >
-                    {currentFolderRecord._count.children === 0 && currentFolderRecord._count.files === 0
-                      ? "删除当前空文件夹"
-                      : "当前文件夹还有内容"}
+                    {currentFolderIsEmpty ? "删除当前空文件夹" : "当前文件夹还有内容"}
                   </button>
+                  <div style={{ marginTop: 8, color: currentFolderIsEmpty ? "#166534" : "#6b7280", fontSize: 12, lineHeight: 1.5 }}>
+                    {currentFolderDeleteHint}
+                  </div>
                 </form>
               </section>
+                );
+              })()
             ) : null}
             <section
               style={{

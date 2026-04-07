@@ -35,3 +35,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - complete the desktop-style file explorer with folder rename, empty-folder deletion, and per-file move controls
 - continue the desktop-style explorer with in-place file rename and folder move actions for day-to-day reorganization
 - support multi-select style batch moves for files so larger current-directory cleanups do not require one-by-one actions
+- polish the explorer UX with clearer folder delete guidance and denser file-row controls to better match desktop file managers
