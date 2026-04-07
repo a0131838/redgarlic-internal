@@ -2,7 +2,7 @@ import { EmployeeRole, SharedFileStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ensureDefaultFileCategories } from "@/lib/bootstrap";
 import { getCurrentEmployee } from "@/lib/auth";
-import { storeSharedFile } from "@/lib/shared-file-storage";
+import { deleteSharedFileObject, storeSharedFile } from "@/lib/shared-file-storage";
 
 function text(value: FormDataEntryValue | null | undefined) {
   return String(value ?? "").trim();
@@ -156,4 +156,42 @@ export async function updateSharedFileStatusFromForm(formData: FormData, actor: 
   return {
     successQuery: `msg=${enc(`status-${nextStatus.toLowerCase()}`)}`,
   };
+}
+
+export async function permanentlyDeleteSharedFileFromForm(formData: FormData) {
+  const fileId = text(formData.get("fileId"));
+  if (!fileId) {
+    return { error: "文件不存在" };
+  }
+
+  const row = await prisma.sharedFile.findUnique({
+    where: { id: fileId },
+    select: {
+      id: true,
+      title: true,
+      filePath: true,
+      status: true,
+    },
+  });
+
+  if (!row) {
+    return { error: "文件不存在" };
+  }
+
+  if (row.status !== SharedFileStatus.DELETED) {
+    return { error: "请先标记删除，再执行彻底删除" };
+  }
+
+  try {
+    await deleteSharedFileObject(row.filePath);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "删除文件失败";
+    return { error: message };
+  }
+
+  await prisma.sharedFile.delete({
+    where: { id: fileId },
+  });
+
+  return { successQuery: "msg=deleted-permanently" };
 }

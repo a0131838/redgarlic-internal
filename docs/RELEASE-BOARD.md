@@ -16,6 +16,7 @@
   - homepage and admin login now display the Macrocosm logo branding asset
   - shared file uploads now allow larger request bodies instead of failing near the default 1 MB action limit
   - shared file actions now submit through stable POST endpoints instead of deploy-sensitive server action ids
+  - deleted files can now be permanently removed from storage and the database after a soft delete
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

@@ -285,7 +285,17 @@ export default async function SharedFilesPage({
                                 标记删除
                               </button>
                             </form>
-                          ) : null}
+                          ) : (
+                            <form action="/admin/shared-files/delete" method="post">
+                              <input type="hidden" name="fileId" value={file.id} />
+                              <button
+                                type="submit"
+                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
+                              >
+                                彻底删除
+                              </button>
+                            </form>
+                          )}
                         </div>
                       </td>
                     ) : null}

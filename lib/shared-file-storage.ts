@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import path from "path";
-import { mkdir, readFile, stat, writeFile } from "fs/promises";
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { mkdir, readFile, rm, stat, writeFile } from "fs/promises";
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const LOCAL_PREFIX = "local://";
@@ -224,4 +224,25 @@ export async function createSharedFileAccessResponse(input: {
   }
 
   return new Response(body, { status: 200, headers });
+}
+
+export async function deleteSharedFileObject(filePath: string) {
+  const s3 = parseS3Uri(filePath);
+  if (s3) {
+    const { client } = createS3Client();
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: s3.bucket,
+        Key: s3.key,
+      })
+    );
+    return;
+  }
+
+  const localPath = absoluteLocalPath(filePath);
+  if (!localPath) {
+    return;
+  }
+
+  await rm(localPath, { force: true });
 }
