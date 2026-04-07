@@ -562,6 +562,88 @@ export async function moveSharedFileFromForm(formData: FormData, actorId: string
   return { successPath: sharedFilesPath(params.toString(), `file-${fileId}`) };
 }
 
+export async function moveSharedFilesFromForm(formData: FormData, actorId: string) {
+  const categoryId = text(formData.get("categoryId"));
+  const targetFolderId = text(formData.get("targetFolderId")) || null;
+  const fileIds = Array.from(
+    new Set(
+      formData
+        .getAll("fileIds")
+        .map((entry) => text(entry))
+        .filter(Boolean),
+    ),
+  );
+
+  if (!categoryId || fileIds.length === 0) {
+    return { error: "请先选择要移动的文件" };
+  }
+
+  let targetLabel = "根目录";
+  if (targetFolderId) {
+    const lineage = await ensureFolderInCategory(targetFolderId, categoryId);
+    if (!lineage?.length) {
+      return { error: "目标目录不存在" };
+    }
+    targetLabel = lineage.map((folder) => folder.name).join(" / ");
+  }
+
+  const files = await prisma.sharedFile.findMany({
+    where: {
+      id: { in: fileIds },
+      categoryId,
+    },
+    select: {
+      id: true,
+      title: true,
+      folderId: true,
+      status: true,
+    },
+  });
+
+  if (files.length !== fileIds.length) {
+    return { error: "部分文件不存在或已不在当前分类中" };
+  }
+  if (files.some((file) => file.status === SharedFileStatus.DELETED)) {
+    return { error: "已删除文件不能批量移动" };
+  }
+
+  const filesToMove = files.filter((file) => file.folderId !== targetFolderId);
+  if (filesToMove.length === 0) {
+    const params = buildSharedFilesParams({
+      categoryId,
+      folderId: targetFolderId,
+      msg: "file-bulk-move-skipped",
+    });
+    return { successPath: sharedFilesPath(params.toString(), "file-list") };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    for (const file of filesToMove) {
+      await tx.sharedFile.update({
+        where: { id: file.id },
+        data: { folderId: targetFolderId },
+      });
+    }
+
+    await tx.sharedFileAudit.createMany({
+      data: filesToMove.map((file) => ({
+        fileId: file.id,
+        actorId,
+        action: "MOVE_BULK",
+        note: targetLabel,
+        fileTitleSnapshot: file.title,
+      })),
+    });
+  });
+
+  const params = buildSharedFilesParams({
+    categoryId,
+    folderId: targetFolderId,
+    msg: `file-bulk-moved-${filesToMove.length}`,
+  });
+  return { successPath: sharedFilesPath(params.toString(), "file-list") };
+}
+
 export async function renameSharedFileFromForm(formData: FormData, actorId: string) {
   const fileId = text(formData.get("fileId"));
   const categoryId = text(formData.get("categoryId"));

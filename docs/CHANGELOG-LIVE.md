@@ -28,3 +28,4 @@
 - added desktop-style folder management actions for renaming folders, deleting empty folders, and moving files between directories
 - added in-place file rename controls so managers can correct document titles without re-uploading the file
 - added folder move controls with descendant-loop protection so directories can be reorganized without creating invalid tree cycles
+- added bulk file selection and move controls so managers can reorganize many files from the current directory in one action

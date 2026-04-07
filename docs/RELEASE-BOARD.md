@@ -32,6 +32,7 @@
   - file explorer now supports renaming folders, deleting empty folders, and moving files into other directories from the same screen
   - managers can now rename files in place without changing the underlying stored object
   - folders can now be moved into other directories, with guards against moving a folder into itself or its descendants
+  - managers can now select multiple files in the current directory and move them together to another folder or back to root
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

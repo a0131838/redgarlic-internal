@@ -499,10 +499,51 @@ export default async function SharedFilesPage({
 
           <section style={{ display: "grid", gap: 12 }}>
             <h2 style={{ margin: 0, fontSize: 18 }}>文件</h2>
+            {isManager && files.length > 0 ? (
+              <form
+                id="bulk-file-move-form"
+                action="/admin/shared-files/move-batch"
+                method="post"
+                style={{
+                  display: "grid",
+                  gap: 10,
+                  padding: 14,
+                  borderRadius: 16,
+                  border: "1px solid #dbeafe",
+                  background: "#eff6ff",
+                }}
+              >
+                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                <div style={{ fontWeight: 700, color: "#1e3a8a" }}>批量整理当前目录文件</div>
+                <div style={{ display: "grid", gap: 10, gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center" }}>
+                  <select
+                    name="targetFolderId"
+                    defaultValue={currentFolderRecord?.id || ""}
+                    style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid #bfdbfe", background: "#fff" }}
+                  >
+                    {moveTargetOptions.map((option) => (
+                      <option key={option.value || "root"} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="submit"
+                    style={{ padding: "10px 16px", borderRadius: 999, border: 0, background: "#1d4ed8", color: "#fff", fontWeight: 700 }}
+                  >
+                    移动选中文件
+                  </button>
+                </div>
+                <div style={{ color: "#475569", fontSize: 13 }}>
+                  在下方勾选多个文件后，一次性移动到目标目录。
+                </div>
+              </form>
+            ) : null}
             <div style={{ overflowX: "auto", paddingBottom: 4 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 920 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 960 }}>
                 <thead>
                   <tr style={{ textAlign: "left", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>
+                    {isManager ? <th style={{ padding: "12px 8px", width: 52 }}>选择</th> : null}
                     <th style={{ padding: "12px 8px" }}>文件</th>
                     <th style={{ padding: "12px 8px" }}>状态</th>
                     <th style={{ padding: "12px 8px" }}>上传人</th>
@@ -518,6 +559,18 @@ export default async function SharedFilesPage({
                       key={file.id}
                       style={{ borderBottom: "1px solid #f1f5f9", verticalAlign: "top", scrollMarginTop: 24 }}
                     >
+                      {isManager ? (
+                        <td style={{ padding: "14px 8px" }}>
+                          <input
+                            type="checkbox"
+                            name="fileIds"
+                            value={file.id}
+                            form="bulk-file-move-form"
+                            disabled={file.status === SharedFileStatus.DELETED}
+                            aria-label={`选择文件 ${file.title}`}
+                          />
+                        </td>
+                      ) : null}
                       <td style={{ padding: "14px 8px" }}>
                         <div style={{ fontWeight: 700 }}>{file.title}</div>
                         <div style={{ color: "#6b7280", fontSize: 13 }}>{file.originalFileName}</div>
@@ -628,7 +681,7 @@ export default async function SharedFilesPage({
                   ))}
                   {files.length === 0 ? (
                     <tr>
-                      <td colSpan={isManager ? 6 : 5} style={{ padding: 30, textAlign: "center", color: "#6b7280" }}>
+                      <td colSpan={isManager ? 7 : 5} style={{ padding: 30, textAlign: "center", color: "#6b7280" }}>
                         当前目录里还没有文件。
                       </td>
                     </tr>
