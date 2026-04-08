@@ -184,44 +184,6 @@ function StatusPill({ status }: { status: SharedFileStatus }) {
   return <MetaChip label="待彻底删除" tone="amber" />;
 }
 
-function ToolLink({
-  href,
-  label,
-  tone = "slate",
-}: {
-  href: string;
-  label: string;
-  tone?: "slate" | "blue" | "amber";
-}) {
-  const palette =
-    tone === "blue"
-      ? { background: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" }
-      : tone === "amber"
-        ? { background: "#fff7ed", color: "#9a3412", border: "#fed7aa" }
-        : { background: "#ffffff", color: "#334155", border: "#e2e8f0" };
-
-  return (
-    <a
-      href={href}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "8px 12px",
-        borderRadius: 12,
-        border: `1px solid ${palette.border}`,
-        background: palette.background,
-        color: palette.color,
-        textDecoration: "none",
-        fontSize: 13,
-        fontWeight: 700,
-      }}
-    >
-      {label}
-    </a>
-  );
-}
-
 function ActionDisclosure({
   label = "更多操作",
   children,
@@ -1213,7 +1175,7 @@ export default async function SharedFilesPage({
                         </div>
                       </Link>
                       {isManager ? (
-                        <div style={{ display: "grid", gap: 8 }}>
+                        <ActionDisclosure label="管理文件夹">
                           <form action="/admin/shared-files/folder-rename" method="post" style={{ display: "grid", gap: 8 }}>
                             <input type="hidden" name="folderId" value={folder.id} />
                             <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
@@ -1233,70 +1195,62 @@ export default async function SharedFilesPage({
                               required
                               className={fieldClass("input")}
                             />
-                            <button
-                              type="submit"
-                              className={explorerButtonClass("neutral")}
-                            >
-                              重命名
+                            <button type="submit" className={explorerButtonClass("neutral")}>
+                              保存名称
                             </button>
                           </form>
-                          <ActionDisclosure>
-                              <form action="/admin/shared-files/folder-move" method="post" style={{ display: "grid", gap: 8 }}>
-                                <input type="hidden" name="folderId" value={folder.id} />
-                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                <ExplorerStateHiddenFields
-                                  redirectFolderId={currentFolderRecord?.id || ""}
-                                  q={q}
-                                  status={status}
-                                  folderSort={folderSort}
-                                  fileSort={fileSort}
-                                  viewMode={viewMode}
-                                />
-                                <select
-                                  name="targetParentId"
-                                  defaultValue={folder.parentId || ""}
-                                  className={fieldClass("select")}
-                                >
-                                  {[{ value: "", label: "根目录" }, ...buildFolderOptions(allFolders, null, 0, [], collectDescendantIds(allFolders, folder.id))].map((option) => (
-                                    <option key={option.value || "root"} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                <button
-                                  type="submit"
-                                  className={explorerButtonClass("soft")}
-                                >
-                                  移动文件夹
-                                </button>
-                              </form>
-                              <form action="/admin/shared-files/folder-delete" method="post">
-                                <input type="hidden" name="folderId" value={folder.id} />
-                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                <input type="hidden" name="returnFolderId" value={currentFolderRecord?.id || ""} />
-                                <input type="hidden" name="focusId" value="file-list" />
-                                <ExplorerStateHiddenFields
-                                  redirectFolderId={currentFolderRecord?.id || ""}
-                                  q={q}
-                                  status={status}
-                                  folderSort={folderSort}
-                                  fileSort={fileSort}
-                                  viewMode={viewMode}
-                                />
-                                <ConfirmSubmitButton
-                                  confirmMessage={`确定要删除文件夹“${folder.name}”吗？`}
-                                  disabled={!isEmptyFolder}
-                                  className={isEmptyFolder ? explorerButtonClass("danger") : explorerButtonClass("neutral")}
-                                  style={{ width: "100%" }}
-                                >
-                                  {isEmptyFolder ? "删除空文件夹" : "含内容，不能删除"}
-                                </ConfirmSubmitButton>
-                                <div style={{ marginTop: 6, color: isEmptyFolder ? "#166534" : "#6b7280", fontSize: 12, lineHeight: 1.5 }}>
-                                  {folderDeleteHint}
-                                </div>
-                              </form>
-                          </ActionDisclosure>
-                        </div>
+                          <form action="/admin/shared-files/folder-move" method="post" style={{ display: "grid", gap: 8 }}>
+                            <input type="hidden" name="folderId" value={folder.id} />
+                            <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                            <ExplorerStateHiddenFields
+                              redirectFolderId={currentFolderRecord?.id || ""}
+                              q={q}
+                              status={status}
+                              folderSort={folderSort}
+                              fileSort={fileSort}
+                              viewMode={viewMode}
+                            />
+                            <select
+                              name="targetParentId"
+                              defaultValue={folder.parentId || ""}
+                              className={fieldClass("select")}
+                            >
+                              {[{ value: "", label: "根目录" }, ...buildFolderOptions(allFolders, null, 0, [], collectDescendantIds(allFolders, folder.id))].map((option) => (
+                                <option key={option.value || "root"} value={option.value}>
+                                  {option.label}
+                                </option>
+                              ))}
+                            </select>
+                            <button type="submit" className={explorerButtonClass("soft")}>
+                              移动文件夹
+                            </button>
+                          </form>
+                          <form action="/admin/shared-files/folder-delete" method="post">
+                            <input type="hidden" name="folderId" value={folder.id} />
+                            <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                            <input type="hidden" name="returnFolderId" value={currentFolderRecord?.id || ""} />
+                            <input type="hidden" name="focusId" value="file-list" />
+                            <ExplorerStateHiddenFields
+                              redirectFolderId={currentFolderRecord?.id || ""}
+                              q={q}
+                              status={status}
+                              folderSort={folderSort}
+                              fileSort={fileSort}
+                              viewMode={viewMode}
+                            />
+                            <ConfirmSubmitButton
+                              confirmMessage={`确定要删除文件夹“${folder.name}”吗？`}
+                              disabled={!isEmptyFolder}
+                              className={isEmptyFolder ? explorerButtonClass("danger") : explorerButtonClass("neutral")}
+                              style={{ width: "100%" }}
+                            >
+                              {isEmptyFolder ? "删除空文件夹" : "含内容，不能删除"}
+                            </ConfirmSubmitButton>
+                            <div style={{ marginTop: 6, color: isEmptyFolder ? "#166534" : "#6b7280", fontSize: 12, lineHeight: 1.5 }}>
+                              {folderDeleteHint}
+                            </div>
+                          </form>
+                        </ActionDisclosure>
                       ) : null}
                     </div>
                   );
@@ -1383,7 +1337,7 @@ export default async function SharedFilesPage({
                 border: "1px solid #e5e7eb",
               }}
             >
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 960 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                 <thead>
                   <tr style={{ textAlign: "left", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>
                     {isManager ? <th style={{ padding: "12px 8px", width: 52, background: "#f8fafc" }}>选择</th> : null}
@@ -1470,149 +1424,142 @@ export default async function SharedFilesPage({
                       <td style={{ padding: rowPadding, color: "#4b5563", fontSize: 13 }}>{formatTime(file.createdAt)}</td>
                       {isManager ? (
                         <td style={{ padding: rowPadding }}>
-                          <div style={{ display: "grid", gap: 10, minWidth: 280 }}>
-                            <form
-                              action="/admin/shared-files/rename"
-                              method="post"
-                              style={{ display: "grid", gap: 8, gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center" }}
-                            >
-                              <input type="hidden" name="fileId" value={file.id} />
-                              <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                              <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                              <ExplorerStateHiddenFields
-                                redirectFolderId={currentFolder?.id || ""}
-                                q={q}
-                                status={status}
-                                folderSort={folderSort}
-                                fileSort={fileSort}
-                                viewMode={viewMode}
-                              />
-                              <input
-                                name="title"
-                                defaultValue={file.title}
-                                required
-                                className={fieldClass("input")}
-                              />
-                              <button
-                                type="submit"
-                                className={explorerButtonClass("neutral")}
+                          <div style={{ display: "grid", gap: 8, minWidth: 220 }}>
+                            <ActionDisclosure label="管理文件">
+                              <form
+                                action="/admin/shared-files/rename"
+                                method="post"
+                                style={{ display: "grid", gap: 8 }}
                               >
-                                重命名
-                              </button>
-                            </form>
-                            <form
-                              action="/admin/shared-files/move"
-                              method="post"
-                              style={{ display: "grid", gap: 8, gridTemplateColumns: "minmax(0, 1fr) auto", alignItems: "center" }}
-                            >
-                              <input type="hidden" name="fileId" value={file.id} />
-                              <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                              <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                              <ExplorerStateHiddenFields
-                                redirectFolderId={currentFolder?.id || ""}
-                                q={q}
-                                status={status}
-                                folderSort={folderSort}
-                                fileSort={fileSort}
-                                viewMode={viewMode}
-                              />
-                              <select
-                                name="targetFolderId"
-                                defaultValue={currentFolderRecord?.id || ""}
-                                className={fieldClass("select")}
+                                <input type="hidden" name="fileId" value={file.id} />
+                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                <ExplorerStateHiddenFields
+                                  redirectFolderId={currentFolder?.id || ""}
+                                  q={q}
+                                  status={status}
+                                  folderSort={folderSort}
+                                  fileSort={fileSort}
+                                  viewMode={viewMode}
+                                />
+                                <input
+                                  name="title"
+                                  defaultValue={file.title}
+                                  required
+                                  className={fieldClass("input")}
+                                />
+                                <button type="submit" className={explorerButtonClass("neutral")}>
+                                  保存名称
+                                </button>
+                              </form>
+                              <form
+                                action="/admin/shared-files/move"
+                                method="post"
+                                style={{ display: "grid", gap: 8 }}
                               >
-                                {moveTargetOptions.map((option) => (
-                                  <option key={option.value || "root"} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="submit"
-                                className={explorerButtonClass("soft")}
-                              >
-                                移动
-                              </button>
-                            </form>
-                            <ActionDisclosure>
-                              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                {file.status === SharedFileStatus.ACTIVE ? (
-                                  <form action="/admin/shared-files/status" method="post">
-                                    <input type="hidden" name="fileId" value={file.id} />
-                                    <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
-                                    <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                    <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                    <ExplorerStateHiddenFields
-                                      redirectFolderId={currentFolder?.id || ""}
-                                      q={q}
-                                      status={status}
-                                      folderSort={folderSort}
-                                      fileSort={fileSort}
-                                      viewMode={viewMode}
-                                    />
-                                    <button type="submit" className={explorerButtonClass("neutral")}>
-                                      归档
-                                    </button>
-                                  </form>
-                                ) : (
-                                  <form action="/admin/shared-files/status" method="post">
-                                    <input type="hidden" name="fileId" value={file.id} />
-                                    <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
-                                    <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                    <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                    <ExplorerStateHiddenFields
-                                      redirectFolderId={currentFolder?.id || ""}
-                                      q={q}
-                                      status={status}
-                                      folderSort={folderSort}
-                                      fileSort={fileSort}
-                                      viewMode={viewMode}
-                                    />
-                                    <button type="submit" className={explorerButtonClass("neutral")}>
-                                      恢复为可用
-                                    </button>
-                                  </form>
-                                )}
-                                {file.status !== SharedFileStatus.DELETED ? (
-                                  <form action="/admin/shared-files/status" method="post">
-                                    <input type="hidden" name="fileId" value={file.id} />
-                                    <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
-                                    <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                    <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                    <ExplorerStateHiddenFields
-                                      redirectFolderId={currentFolder?.id || ""}
-                                      q={q}
-                                      status={status}
-                                      folderSort={folderSort}
-                                      fileSort={fileSort}
-                                      viewMode={viewMode}
-                                    />
-                                    <button type="submit" className={explorerButtonClass("danger")}>
-                                      标记删除
-                                    </button>
-                                  </form>
-                                ) : (
-                                  <form action="/admin/shared-files/delete" method="post">
-                                    <input type="hidden" name="fileId" value={file.id} />
-                                    <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
-                                    <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
-                                    <ExplorerStateHiddenFields
-                                      redirectFolderId={currentFolder?.id || ""}
-                                      q={q}
-                                      status={status}
-                                      folderSort={folderSort}
-                                      fileSort={fileSort}
-                                      viewMode={viewMode}
-                                    />
+                                <input type="hidden" name="fileId" value={file.id} />
+                                <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                <ExplorerStateHiddenFields
+                                  redirectFolderId={currentFolder?.id || ""}
+                                  q={q}
+                                  status={status}
+                                  folderSort={folderSort}
+                                  fileSort={fileSort}
+                                  viewMode={viewMode}
+                                />
+                                <select
+                                  name="targetFolderId"
+                                  defaultValue={currentFolderRecord?.id || ""}
+                                  className={fieldClass("select")}
+                                >
+                                  {moveTargetOptions.map((option) => (
+                                    <option key={option.value || "root"} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button type="submit" className={explorerButtonClass("soft")}>
+                                  移动文件
+                                </button>
+                              </form>
+                              {file.status === SharedFileStatus.ACTIVE ? (
+                                <form action="/admin/shared-files/status" method="post">
+                                  <input type="hidden" name="fileId" value={file.id} />
+                                  <input type="hidden" name="nextStatus" value={SharedFileStatus.ARCHIVED} />
+                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                  <ExplorerStateHiddenFields
+                                    redirectFolderId={currentFolder?.id || ""}
+                                    q={q}
+                                    status={status}
+                                    folderSort={folderSort}
+                                    fileSort={fileSort}
+                                    viewMode={viewMode}
+                                  />
+                                  <button type="submit" className={explorerButtonClass("neutral")} style={{ width: "100%" }}>
+                                    归档
+                                  </button>
+                                </form>
+                              ) : (
+                                <form action="/admin/shared-files/status" method="post">
+                                  <input type="hidden" name="fileId" value={file.id} />
+                                  <input type="hidden" name="nextStatus" value={SharedFileStatus.ACTIVE} />
+                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                  <ExplorerStateHiddenFields
+                                    redirectFolderId={currentFolder?.id || ""}
+                                    q={q}
+                                    status={status}
+                                    folderSort={folderSort}
+                                    fileSort={fileSort}
+                                    viewMode={viewMode}
+                                  />
+                                  <button type="submit" className={explorerButtonClass("neutral")} style={{ width: "100%" }}>
+                                    恢复为可用
+                                  </button>
+                                </form>
+                              )}
+                              {file.status !== SharedFileStatus.DELETED ? (
+                                <form action="/admin/shared-files/status" method="post">
+                                  <input type="hidden" name="fileId" value={file.id} />
+                                  <input type="hidden" name="nextStatus" value={SharedFileStatus.DELETED} />
+                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                  <ExplorerStateHiddenFields
+                                    redirectFolderId={currentFolder?.id || ""}
+                                    q={q}
+                                    status={status}
+                                    folderSort={folderSort}
+                                    fileSort={fileSort}
+                                    viewMode={viewMode}
+                                  />
+                                  <button type="submit" className={explorerButtonClass("danger")} style={{ width: "100%" }}>
+                                    标记删除
+                                  </button>
+                                </form>
+                              ) : (
+                                <form action="/admin/shared-files/delete" method="post">
+                                  <input type="hidden" name="fileId" value={file.id} />
+                                  <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
+                                  <input type="hidden" name="folderId" value={currentFolder?.id || ""} />
+                                  <ExplorerStateHiddenFields
+                                    redirectFolderId={currentFolder?.id || ""}
+                                    q={q}
+                                    status={status}
+                                    folderSort={folderSort}
+                                    fileSort={fileSort}
+                                    viewMode={viewMode}
+                                  />
                                   <ConfirmSubmitButton
                                     confirmMessage={`确定要彻底删除文件“${file.title}”吗？这个操作会连同存储中的文件一起移除，无法恢复。`}
                                     className={explorerButtonClass("danger")}
+                                    style={{ width: "100%" }}
                                   >
                                     彻底删除
                                   </ConfirmSubmitButton>
                                 </form>
                               )}
-                              </div>
                             </ActionDisclosure>
                           </div>
                         </td>

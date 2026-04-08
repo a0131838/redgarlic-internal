@@ -49,3 +49,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - extend the same cleanup ergonomics to folders with multi-select organization and clearer batch outcomes
 - add direct drag-style organization so moving files or folders feels closer to desktop file explorers instead of only form-driven actions
 - simplify the explorer surface and strengthen button hover/press affordances so the page feels cleaner and more obviously interactive
+- reduce visual clutter further by hiding per-item edit forms behind compact management drawers for files and folders
