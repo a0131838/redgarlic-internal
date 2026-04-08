@@ -46,6 +46,7 @@
   - the explorer now uses a more unified management layout with shared action disclosures and a right-side quick-tool strip for common admin actions
   - managers can now recover archived or soft-deleted files in bulk, and deleted files remain selectable for restore workflows
   - folders now support current-directory multi-select actions, including bulk move and bulk delete for empty folders
+  - files and folders can now be dragged onto folder cards or breadcrumb targets to move them more like a desktop file manager
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { ensureDefaultFileCategories } from "@/lib/bootstrap";
 import { requireEmployee } from "@/lib/auth";
 import { getFolderLineage } from "./_lib";
+import { DragMoveController } from "./drag-move-controller";
 import {
   BulkActionSubmitButton,
   BulkSelectionToolbar,
@@ -726,6 +727,18 @@ export default async function SharedFilesPage({
         </div>
       </section>
 
+      {isManager && activeCategory ? (
+        <DragMoveController
+          categoryId={activeCategory.id}
+          currentFolderId={currentFolder?.id || ""}
+          q={q}
+          status={status}
+          folderSort={folderSort}
+          fileSort={fileSort}
+          viewMode={viewMode}
+        />
+      ) : null}
+
       {feedbackMessage ? (
         <div style={{ padding: 12, borderRadius: 16, background: "#ecfdf5", color: "#166534", border: "1px solid #bbf7d0" }}>
           {feedbackMessage}
@@ -869,7 +882,7 @@ export default async function SharedFilesPage({
             }}
           >
             <Link href={rootHref} style={{ color: currentFolder ? "#1d4ed8" : "#111827", textDecoration: "none", fontWeight: 700 }}>
-              {activeCategory?.name || "共享文件"}
+              <span data-drop-folder-id="">{activeCategory?.name || "共享文件"}</span>
             </Link>
             {validFolderLineage.map((folder) => (
               <div key={folder.id} style={{ display: "flex", gap: 10, alignItems: "center" }}>
@@ -886,7 +899,7 @@ export default async function SharedFilesPage({
                   })}
                   style={{ color: folder.id === currentFolder?.id ? "#111827" : "#1d4ed8", textDecoration: "none", fontWeight: 700 }}
                 >
-                  {folder.name}
+                  <span data-drop-folder-id={folder.id}>{folder.name}</span>
                 </Link>
               </div>
             ))}
@@ -1010,6 +1023,10 @@ export default async function SharedFilesPage({
                     <div
                       key={folder.id}
                       id={`folder-${folder.id}`}
+                      data-drag-kind={isManager ? "folder" : undefined}
+                      data-drag-id={isManager ? folder.id : undefined}
+                      data-drop-folder-id={folder.id}
+                      title={isManager ? "可以把文件或文件夹拖到这里完成移动" : undefined}
                       style={{
                         display: "grid",
                         gap: 12,
@@ -1020,6 +1037,7 @@ export default async function SharedFilesPage({
                         color: "#111827",
                         scrollMarginTop: 24,
                         boxShadow: isCompact ? "none" : "0 8px 24px rgba(15, 23, 42, 0.04)",
+                        transition: "background 120ms ease, border-color 120ms ease, box-shadow 120ms ease",
                       }}
                     >
                       {isManager ? (
@@ -1277,11 +1295,15 @@ export default async function SharedFilesPage({
                     <tr
                       id={`file-${file.id}`}
                       key={file.id}
+                      data-drag-kind={isManager ? "file" : undefined}
+                      data-drag-id={isManager ? file.id : undefined}
+                      title={isManager ? "可以把文件拖到上方文件夹卡片或路径里完成移动" : undefined}
                       style={{
                         borderBottom: "1px solid #f1f5f9",
                         verticalAlign: "top",
                         scrollMarginTop: 24,
                         background: file.status === SharedFileStatus.DELETED ? "#fff7f7" : "#fff",
+                        transition: "background 120ms ease, opacity 120ms ease",
                       }}
                     >
                       {isManager ? (

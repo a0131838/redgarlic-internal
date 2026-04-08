@@ -42,3 +42,4 @@
 - unified explorer action panels with shared disclosure styling, a right-rail quick-tool strip, and consistent management cards for folder/file operations
 - completed the cleanup loop with bulk restore-to-active support, single-file recovery from deleted state, and deleted-file selection tools in the explorer
 - added folder-level batch organization with multi-select move/delete-empty actions and clearer bulk result messages for directory cleanup
+- added desktop-style drag-and-drop move support so managers can drag files or folders onto folder cards and breadcrumb targets without opening extra forms
