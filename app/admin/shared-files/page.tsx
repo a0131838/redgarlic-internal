@@ -781,6 +781,28 @@ export default async function SharedFilesPage({
         .sf-summary:hover {
           color: #111827;
         }
+
+        .sf-inline-link {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px 8px;
+          border-radius: 999px;
+          border: 1px solid #e2e8f0;
+          background: #fff;
+          color: #475569;
+          text-decoration: none;
+          font-size: 12px;
+          font-weight: 600;
+          transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, color 140ms ease;
+        }
+
+        .sf-inline-link:hover {
+          transform: translateY(-1px);
+          border-color: #cbd5e1;
+          color: #111827;
+          box-shadow: 0 8px 14px rgba(15, 23, 42, 0.08);
+        }
       `}</style>
       <section
         style={{
@@ -1175,7 +1197,7 @@ export default async function SharedFilesPage({
                         </div>
                       </Link>
                       {isManager ? (
-                        <ActionDisclosure label="管理文件夹">
+                        <ActionDisclosure label="操作">
                           <form action="/admin/shared-files/folder-rename" method="post" style={{ display: "grid", gap: 8 }}>
                             <input type="hidden" name="folderId" value={folder.id} />
                             <input type="hidden" name="categoryId" value={activeCategory?.id || ""} />
@@ -1337,7 +1359,7 @@ export default async function SharedFilesPage({
                 border: "1px solid #e5e7eb",
               }}
             >
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
                 <thead>
                   <tr style={{ textAlign: "left", color: "#6b7280", borderBottom: "1px solid #e5e7eb" }}>
                     {isManager ? <th style={{ padding: "12px 8px", width: 52, background: "#f8fafc" }}>选择</th> : null}
@@ -1349,8 +1371,6 @@ export default async function SharedFilesPage({
                         direction={fileSort === "name-desc" ? "desc" : "asc"}
                       />
                     </th>
-                    <th style={{ padding: "12px 8px", background: "#f8fafc" }}>状态</th>
-                    <th style={{ padding: "12px 8px", background: "#f8fafc" }}>上传人</th>
                     <th style={{ padding: "12px 8px" }}>
                       <SortHeaderLink
                         href={fileSizeSortHref}
@@ -1406,26 +1426,23 @@ export default async function SharedFilesPage({
                         </div>
                         <div style={{ color: "#6b7280", fontSize: 13 }}>{file.originalFileName}</div>
                         {file.remarks ? <div style={{ marginTop: 6, color: "#4b5563", fontSize: 13 }}>{file.remarks}</div> : null}
+                        <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>
+                          上传人 {file.uploader.name}
+                          {file.uploader.email ? ` · ${file.uploader.email}` : ""}
+                        </div>
                         <div style={{ marginTop: 8, display: "flex", gap: 10, flexWrap: "wrap" }}>
-                          <a href={`/api/admin/shared-files/${file.id}`} target="_blank" rel="noreferrer">
+                          <a className="sf-inline-link" href={`/api/admin/shared-files/${file.id}`} target="_blank" rel="noreferrer">
                             预览
                           </a>
-                          <a href={`/api/admin/shared-files/${file.id}?download=1`}>下载</a>
+                          <a className="sf-inline-link" href={`/api/admin/shared-files/${file.id}?download=1`}>下载</a>
                         </div>
-                      </td>
-                      <td style={{ padding: rowPadding }}>
-                        <StatusPill status={file.status} />
-                      </td>
-                      <td style={{ padding: rowPadding }}>
-                        <div>{file.uploader.name}</div>
-                        <div style={{ color: "#6b7280", fontSize: 13 }}>{file.uploader.email}</div>
                       </td>
                       <td style={{ padding: rowPadding }}>{formatBytes(file.fileSizeBytes)}</td>
                       <td style={{ padding: rowPadding, color: "#4b5563", fontSize: 13 }}>{formatTime(file.createdAt)}</td>
                       {isManager ? (
                         <td style={{ padding: rowPadding }}>
                           <div style={{ display: "grid", gap: 8, minWidth: 220 }}>
-                            <ActionDisclosure label="管理文件">
+                            <ActionDisclosure label="操作">
                               <form
                                 action="/admin/shared-files/rename"
                                 method="post"
@@ -1568,7 +1585,7 @@ export default async function SharedFilesPage({
                   ))}
                   {files.length === 0 ? (
                     <tr>
-                      <td colSpan={isManager ? 7 : 5} style={{ padding: 30, textAlign: "center", color: "#6b7280" }}>
+                      <td colSpan={isManager ? 5 : 3} style={{ padding: 30, textAlign: "center", color: "#6b7280" }}>
                         当前目录里还没有文件。
                       </td>
                     </tr>

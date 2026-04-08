@@ -49,6 +49,7 @@
   - files and folders can now be dragged onto folder cards or breadcrumb targets to move them more like a desktop file manager
   - the explorer is now visually simpler, with fewer stacked tool panels and stronger hover/press states so buttons feel obviously clickable
   - file rows and folder cards now keep their heavy edit forms tucked into compact management drawers, so the main list feels cleaner at a glance
+  - the file table now uses a quieter list mode with fewer columns, lighter preview/download affordances, and status/uploader details folded into the main file cell
 
 ## Release Rules
 - every production deploy must include changelog, release board, and task note updates
