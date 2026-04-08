@@ -48,3 +48,4 @@ Build the first independent project skeleton for Hongsuan Intelligent's internal
 - close the file-cleanup loop with restore actions so archive/delete flows are reversible both per-file and in bulk
 - extend the same cleanup ergonomics to folders with multi-select organization and clearer batch outcomes
 - add direct drag-style organization so moving files or folders feels closer to desktop file explorers instead of only form-driven actions
+- simplify the explorer surface and strengthen button hover/press affordances so the page feels cleaner and more obviously interactive

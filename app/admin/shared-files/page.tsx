@@ -104,6 +104,14 @@ function describeViewMode(viewMode: ViewMode) {
   return viewMode === "compact" ? "紧凑视图" : "舒适视图";
 }
 
+function explorerButtonClass(variant: "primary" | "neutral" | "soft" | "danger" | "ghost" = "neutral") {
+  return `sf-btn sf-btn-${variant}`;
+}
+
+function fieldClass(kind: "input" | "select" | "textarea" | "file" = "input") {
+  return `sf-field sf-field-${kind}`;
+}
+
 function SortHeaderLink({
   href,
   label,
@@ -231,10 +239,8 @@ function ActionDisclosure({
       }}
     >
       <summary
+        className="sf-summary"
         style={{
-          cursor: "pointer",
-          fontWeight: 700,
-          color: "#334155",
           listStyle: "none",
         }}
       >
@@ -664,9 +670,156 @@ export default async function SharedFilesPage({
   const folderGridTemplate = isCompact
     ? "repeat(auto-fit, minmax(180px, 1fr))"
     : "repeat(auto-fit, minmax(220px, 1fr))";
+  const compactSummary = [folderCountLabel, fileCountLabel, describeFolderSort(folderSort), describeFileSort(fileSort), describeViewMode(viewMode)].join(" · ");
 
   return (
     <main style={{ maxWidth: 1440, margin: "0 auto", padding: 28, display: "grid", gap: 18 }}>
+      <style>{`
+        .sf-btn {
+          appearance: none;
+          border: 1px solid #dbe2ea;
+          border-radius: 12px;
+          background: #ffffff;
+          color: #1f2937;
+          padding: 10px 14px;
+          font-weight: 700;
+          line-height: 1.2;
+          cursor: pointer;
+          transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease, color 140ms ease;
+          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
+        .sf-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+          border-color: #cbd5e1;
+        }
+
+        .sf-btn:active {
+          transform: translateY(0);
+          box-shadow: 0 3px 8px rgba(15, 23, 42, 0.12);
+        }
+
+        .sf-btn:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+          transform: none;
+          box-shadow: none;
+        }
+
+        .sf-btn:focus-visible,
+        .sf-field:focus-visible,
+        .sf-link-chip:focus-visible,
+        .sf-summary:focus-visible {
+          outline: 2px solid #f59e0b;
+          outline-offset: 2px;
+        }
+
+        .sf-btn-primary {
+          border-color: #7f1d1d;
+          background: linear-gradient(135deg, #7f1d1d, #9a3412);
+          color: #fff;
+        }
+
+        .sf-btn-primary:hover {
+          border-color: #7f1d1d;
+          box-shadow: 0 12px 22px rgba(127, 29, 29, 0.22);
+        }
+
+        .sf-btn-neutral {
+          background: #fff;
+          color: #1f2937;
+        }
+
+        .sf-btn-soft {
+          border-color: #dbeafe;
+          background: #f8fbff;
+          color: #1d4ed8;
+        }
+
+        .sf-btn-danger {
+          border-color: #fecaca;
+          background: #fff5f5;
+          color: #991b1b;
+        }
+
+        .sf-btn-ghost {
+          border-color: rgba(255, 255, 255, 0.22);
+          background: rgba(255, 255, 255, 0.08);
+          color: #fff;
+          box-shadow: none;
+        }
+
+        .sf-btn-ghost:hover {
+          border-color: rgba(255, 255, 255, 0.38);
+          background: rgba(255, 255, 255, 0.14);
+          box-shadow: 0 10px 18px rgba(15, 23, 42, 0.12);
+        }
+
+        .sf-field {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 12px;
+          border: 1px solid #d7dee7;
+          background: #fff;
+          color: #111827;
+          transition: border-color 140ms ease, box-shadow 140ms ease, background 140ms ease;
+        }
+
+        .sf-field:hover {
+          border-color: #cbd5e1;
+        }
+
+        .sf-field:focus {
+          border-color: #f59e0b;
+          box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.16);
+          outline: none;
+        }
+
+        .sf-link-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 8px 12px;
+          border-radius: 12px;
+          border: 1px solid #e2e8f0;
+          background: #fff;
+          color: #334155;
+          text-decoration: none;
+          font-size: 13px;
+          font-weight: 700;
+          transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease, background 140ms ease, color 140ms ease;
+        }
+
+        .sf-link-chip:hover {
+          transform: translateY(-1px);
+          border-color: #cbd5e1;
+          box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+        }
+
+        .sf-link-chip-blue {
+          border-color: #bfdbfe;
+          background: #eff6ff;
+          color: #1d4ed8;
+        }
+
+        .sf-link-chip-amber {
+          border-color: #fed7aa;
+          background: #fff7ed;
+          color: #9a3412;
+        }
+
+        .sf-summary {
+          cursor: pointer;
+          font-weight: 700;
+          color: #334155;
+          transition: color 140ms ease;
+        }
+
+        .sf-summary:hover {
+          color: #111827;
+        }
+      `}</style>
       <section
         style={{
           display: "flex",
@@ -674,17 +827,17 @@ export default async function SharedFilesPage({
           gap: 16,
           flexWrap: "wrap",
           alignItems: "flex-start",
-          borderRadius: 22,
-          padding: 24,
+          borderRadius: 20,
+          padding: 22,
           color: "#fff7ed",
           background: "linear-gradient(135deg, #7f1d1d, #9a3412)",
         }}
       >
         <div>
           <div style={{ fontSize: 13, letterSpacing: 1, opacity: 0.9 }}>FILE EXPLORER</div>
-          <h1 style={{ margin: "8px 0 10px" }}>共享文件库</h1>
-          <p style={{ margin: 0, maxWidth: 760, lineHeight: 1.7 }}>
-            现在按电脑文件管理器的习惯来用：先进入分类，再进入文件夹，文件和目录都围绕当前目录操作。
+          <h1 style={{ margin: "8px 0 8px" }}>共享文件库</h1>
+          <p style={{ margin: 0, maxWidth: 720, lineHeight: 1.65, opacity: 0.92 }}>
+            现在会尽量像电脑文件管理器一样工作，但把界面收得更干净，只保留高频动作。
           </p>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -693,14 +846,14 @@ export default async function SharedFilesPage({
           <div style={{ marginTop: 12, display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
             <Link
               href="/admin"
-              style={{ color: "#fff", textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.45)" }}
+              className={`sf-link-chip ${explorerButtonClass("ghost")}`}
             >
               控制台
             </Link>
             {isManager ? (
               <Link
                 href="/admin/team"
-                style={{ color: "#fff", textDecoration: "none", borderBottom: "1px solid rgba(255,255,255,0.45)" }}
+                className={`sf-link-chip ${explorerButtonClass("ghost")}`}
               >
                 员工账号
               </Link>
@@ -708,17 +861,7 @@ export default async function SharedFilesPage({
             <form action="/admin/logout" method="post">
               <button
                 type="submit"
-                style={{
-                  color: "#fff",
-                  textDecoration: "none",
-                  borderBottom: "1px solid rgba(255,255,255,0.45)",
-                  background: "transparent",
-                  borderTop: 0,
-                  borderLeft: 0,
-                  borderRight: 0,
-                  padding: 0,
-                  cursor: "pointer",
-                }}
+                className={explorerButtonClass("ghost")}
               >
                 退出登录
               </button>
@@ -770,17 +913,17 @@ export default async function SharedFilesPage({
           }}
         >
           <form method="get" style={{ display: "grid", gap: 14 }}>
-            <div style={{ display: "grid", gap: 10, gridTemplateColumns: "2fr 1fr 1fr auto" }}>
+            <div style={{ display: "grid", gap: 10, gridTemplateColumns: "minmax(0, 1.8fr) 0.9fr 0.9fr auto" }}>
               <input
                 name="q"
                 defaultValue={q}
                 placeholder="搜索当前目录里的文件"
-                style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+                className={fieldClass("input")}
               />
               <select
                 name="categoryId"
                 defaultValue={activeCategory?.id}
-                style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+                className={fieldClass("select")}
               >
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -791,7 +934,7 @@ export default async function SharedFilesPage({
               <select
                 name="status"
                 defaultValue={status}
-                style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+                className={fieldClass("select")}
               >
                 <option value="">全部状态</option>
                 {Object.values(SharedFileStatus).map((value) => (
@@ -802,16 +945,16 @@ export default async function SharedFilesPage({
               </select>
               <button
                 type="submit"
-                style={{ borderRadius: 999, border: 0, background: "#111827", color: "#fff", padding: "10px 18px" }}
+                className={explorerButtonClass("primary")}
               >
                 筛选
               </button>
             </div>
-            <div style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr 1fr" }}>
+            <div style={{ display: "grid", gap: 10, gridTemplateColumns: "1fr 1fr 0.9fr" }}>
               <select
                 name="folderSort"
                 defaultValue={folderSort}
-                style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+                className={fieldClass("select")}
               >
                 {folderSortOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -822,7 +965,7 @@ export default async function SharedFilesPage({
               <select
                 name="fileSort"
                 defaultValue={fileSort}
-                style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+                className={fieldClass("select")}
               >
                 {fileSortOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -830,42 +973,40 @@ export default async function SharedFilesPage({
                   </option>
                 ))}
               </select>
-            </div>
-            <select
-              name="viewMode"
-              defaultValue={viewMode}
-              style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
-            >
-              {viewModeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
+              <select
+                name="viewMode"
+                defaultValue={viewMode}
+                className={fieldClass("select")}
+              >
+                {viewModeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
+            </div>
             {currentFolder ? <input type="hidden" name="folderId" value={currentFolder.id} /> : null}
           </form>
 
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
-            <MetaChip label={folderCountLabel} />
-            <MetaChip label={fileCountLabel} />
-            <MetaChip label={describeFolderSort(folderSort)} tone="blue" />
-            <MetaChip label={describeFileSort(fileSort)} tone="blue" />
-            <MetaChip label={describeViewMode(viewMode)} tone="amber" />
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 10,
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "10px 12px",
+              borderRadius: 14,
+              background: "#f8fafc",
+              color: "#475569",
+              fontSize: 13,
+            }}
+          >
+            <div>{compactSummary}</div>
             {hasFilters ? (
               <Link
                 href={clearFilterHref}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  padding: "6px 10px",
-                  borderRadius: 999,
-                  border: "1px solid #fecaca",
-                  background: "#fff5f5",
-                  color: "#991b1b",
-                  textDecoration: "none",
-                  fontSize: 12,
-                  fontWeight: 600,
-                }}
+                className="sf-link-chip sf-link-chip-amber"
               >
                 清空筛选
               </Link>
@@ -909,10 +1050,7 @@ export default async function SharedFilesPage({
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <div style={{ display: "grid", gap: 6 }}>
                 <h2 style={{ margin: 0, fontSize: 18 }}>当前目录</h2>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <MetaChip label={folderCountLabel} />
-                  <MetaChip label={describeFolderSort(folderSort)} tone="blue" />
-                </div>
+                <div style={{ color: "#64748b", fontSize: 13 }}>{folderCountLabel} · {describeFolderSort(folderSort)}</div>
               </div>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
                 <SortHeaderLink
@@ -973,13 +1111,13 @@ export default async function SharedFilesPage({
                       fileSort={fileSort}
                       viewMode={viewMode}
                     />
-                    <div style={{ fontWeight: 700, color: "#9a3412" }}>批量整理当前目录文件夹</div>
+                    <div style={{ fontWeight: 700, color: "#9a3412" }}>批量整理文件夹</div>
                     <FolderSelectionToolbar />
                     <div style={{ display: "grid", gap: 10, gridTemplateColumns: "180px minmax(0, 1fr) auto", alignItems: "center" }}>
                       <select
                         name="bulkAction"
                         defaultValue="MOVE"
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid #fed7aa", background: "#fff" }}
+                        className={fieldClass("select")}
                       >
                         <option value="MOVE">批量移动</option>
                         <option value="DELETE_EMPTY">批量删除空文件夹</option>
@@ -987,7 +1125,7 @@ export default async function SharedFilesPage({
                       <select
                         name="targetParentId"
                         defaultValue={currentFolderRecord?.id || ""}
-                        style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid #fed7aa", background: "#fff" }}
+                        className={fieldClass("select")}
                       >
                         {moveTargetOptions.map((option) => (
                           <option key={option.value || "root"} value={option.value}>
@@ -996,10 +1134,10 @@ export default async function SharedFilesPage({
                         ))}
                       </select>
                       <BulkActionSubmitButton
+                        className={explorerButtonClass("primary")}
                         confirmMessages={{
                           DELETE_EMPTY: "确定要批量删除选中的空文件夹吗？非空文件夹会被保留。",
                         }}
-                        style={{ padding: "10px 16px", borderRadius: 999, border: 0, background: "#9a3412", color: "#fff", fontWeight: 700 }}
                       />
                     </div>
                     <div style={{ color: "#7c2d12", fontSize: 13 }}>
@@ -1093,11 +1231,11 @@ export default async function SharedFilesPage({
                               name="name"
                               defaultValue={folder.name}
                               required
-                              style={{ padding: 8, borderRadius: 10, border: "1px solid #d1d5db" }}
+                              className={fieldClass("input")}
                             />
                             <button
                               type="submit"
-                              style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                              className={explorerButtonClass("neutral")}
                             >
                               重命名
                             </button>
@@ -1117,7 +1255,7 @@ export default async function SharedFilesPage({
                                 <select
                                   name="targetParentId"
                                   defaultValue={folder.parentId || ""}
-                                  style={{ padding: 8, borderRadius: 10, border: "1px solid #d1d5db", background: "#fff" }}
+                                  className={fieldClass("select")}
                                 >
                                   {[{ value: "", label: "根目录" }, ...buildFolderOptions(allFolders, null, 0, [], collectDescendantIds(allFolders, folder.id))].map((option) => (
                                     <option key={option.value || "root"} value={option.value}>
@@ -1127,7 +1265,7 @@ export default async function SharedFilesPage({
                                 </select>
                                 <button
                                   type="submit"
-                                  style={{ padding: "8px 10px", borderRadius: 12, border: "1px solid #bfdbfe", color: "#1d4ed8", background: "#eff6ff" }}
+                                  className={explorerButtonClass("soft")}
                                 >
                                   移动文件夹
                                 </button>
@@ -1148,15 +1286,8 @@ export default async function SharedFilesPage({
                                 <ConfirmSubmitButton
                                   confirmMessage={`确定要删除文件夹“${folder.name}”吗？`}
                                   disabled={!isEmptyFolder}
-                                  style={{
-                                    width: "100%",
-                                    padding: "8px 10px",
-                                    borderRadius: 12,
-                                    border: "1px solid #fecaca",
-                                    background: isEmptyFolder ? "#fff5f5" : "#f8fafc",
-                                    color: isEmptyFolder ? "#991b1b" : "#94a3b8",
-                                    cursor: isEmptyFolder ? "pointer" : "not-allowed",
-                                  }}
+                                  className={isEmptyFolder ? explorerButtonClass("danger") : explorerButtonClass("neutral")}
+                                  style={{ width: "100%" }}
                                 >
                                   {isEmptyFolder ? "删除空文件夹" : "含内容，不能删除"}
                                 </ConfirmSubmitButton>
@@ -1183,10 +1314,7 @@ export default async function SharedFilesPage({
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
               <div style={{ display: "grid", gap: 6 }}>
                 <h2 style={{ margin: 0, fontSize: 18 }}>文件</h2>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <MetaChip label={fileCountLabel} />
-                  <MetaChip label={describeFileSort(fileSort)} tone="blue" />
-                </div>
+                <div style={{ color: "#64748b", fontSize: 13 }}>{fileCountLabel} · {describeFileSort(fileSort)}</div>
               </div>
               <div style={{ color: "#64748b", fontSize: 13 }}>
                 直接点击列表列头也可以切换常用排序。
@@ -1216,13 +1344,13 @@ export default async function SharedFilesPage({
                   fileSort={fileSort}
                   viewMode={viewMode}
                 />
-                <div style={{ fontWeight: 700, color: "#1e3a8a" }}>批量整理当前目录文件</div>
+                <div style={{ fontWeight: 700, color: "#1e3a8a" }}>批量整理文件</div>
                 <BulkSelectionToolbar />
                 <div style={{ display: "grid", gap: 10, gridTemplateColumns: "180px minmax(0, 1fr) auto", alignItems: "center" }}>
                   <select
                     name="bulkAction"
                     defaultValue="MOVE"
-                    style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid #bfdbfe", background: "#fff" }}
+                    className={fieldClass("select")}
                   >
                     <option value="MOVE">批量移动</option>
                     <option value="ARCHIVE">批量归档</option>
@@ -1232,7 +1360,7 @@ export default async function SharedFilesPage({
                   <select
                     name="targetFolderId"
                     defaultValue={currentFolderRecord?.id || ""}
-                    style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid #bfdbfe", background: "#fff" }}
+                    className={fieldClass("select")}
                   >
                     {moveTargetOptions.map((option) => (
                       <option key={option.value || "root"} value={option.value}>
@@ -1240,9 +1368,7 @@ export default async function SharedFilesPage({
                       </option>
                     ))}
                   </select>
-                  <BulkActionSubmitButton
-                    style={{ padding: "10px 16px", borderRadius: 999, border: 0, background: "#1d4ed8", color: "#fff", fontWeight: 700 }}
-                  />
+                  <BulkActionSubmitButton className={explorerButtonClass("soft")} />
                 </div>
                 <div style={{ color: "#475569", fontSize: 13 }}>
                   先在下方勾选文件。只有“批量移动”会使用目标目录，其余动作会忽略右侧目录选择。
@@ -1365,11 +1491,11 @@ export default async function SharedFilesPage({
                                 name="title"
                                 defaultValue={file.title}
                                 required
-                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                                className={fieldClass("input")}
                               />
                               <button
                                 type="submit"
-                                style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff", whiteSpace: "nowrap" }}
+                                className={explorerButtonClass("neutral")}
                               >
                                 重命名
                               </button>
@@ -1393,7 +1519,7 @@ export default async function SharedFilesPage({
                               <select
                                 name="targetFolderId"
                                 defaultValue={currentFolderRecord?.id || ""}
-                                style={{ width: "100%", padding: "8px 10px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                                className={fieldClass("select")}
                               >
                                 {moveTargetOptions.map((option) => (
                                   <option key={option.value || "root"} value={option.value}>
@@ -1403,7 +1529,7 @@ export default async function SharedFilesPage({
                               </select>
                               <button
                                 type="submit"
-                                style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #bfdbfe", color: "#1d4ed8", background: "#eff6ff", whiteSpace: "nowrap" }}
+                                className={explorerButtonClass("soft")}
                               >
                                 移动
                               </button>
@@ -1424,7 +1550,7 @@ export default async function SharedFilesPage({
                                       fileSort={fileSort}
                                       viewMode={viewMode}
                                     />
-                                    <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
+                                    <button type="submit" className={explorerButtonClass("neutral")}>
                                       归档
                                     </button>
                                   </form>
@@ -1442,7 +1568,7 @@ export default async function SharedFilesPage({
                                       fileSort={fileSort}
                                       viewMode={viewMode}
                                     />
-                                    <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}>
+                                    <button type="submit" className={explorerButtonClass("neutral")}>
                                       恢复为可用
                                     </button>
                                   </form>
@@ -1461,7 +1587,7 @@ export default async function SharedFilesPage({
                                       fileSort={fileSort}
                                       viewMode={viewMode}
                                     />
-                                    <button type="submit" style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #fecaca", color: "#991b1b", background: "#fff5f5" }}>
+                                    <button type="submit" className={explorerButtonClass("danger")}>
                                       标记删除
                                     </button>
                                   </form>
@@ -1480,7 +1606,7 @@ export default async function SharedFilesPage({
                                     />
                                   <ConfirmSubmitButton
                                     confirmMessage={`确定要彻底删除文件“${file.title}”吗？这个操作会连同存储中的文件一起移除，无法恢复。`}
-                                    style={{ padding: "8px 12px", borderRadius: 12, border: "1px solid #b91c1c", color: "#fff", background: "#b91c1c" }}
+                                    className={explorerButtonClass("danger")}
                                   >
                                     彻底删除
                                   </ConfirmSubmitButton>
@@ -1508,17 +1634,6 @@ export default async function SharedFilesPage({
 
         {isManager ? (
           <div style={{ display: "grid", gap: 16, alignContent: "start", alignSelf: "start", position: "sticky", top: 20 }}>
-            <RailSection
-              title="快速工具"
-              description="把右侧常用管理动作收成一个固定工具带，切目录时也能快速跳转。"
-            >
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                {currentFolderRecord ? <ToolLink href="#current-folder-admin" label="当前文件夹" tone="blue" /> : null}
-                <ToolLink href="#upload-panel" label="上传文件" tone="blue" />
-                <ToolLink href="#folder-form" label="新建文件夹" />
-                <ToolLink href="#category-form" label="新增分类" tone="amber" />
-              </div>
-            </RailSection>
             {currentFolderRecord ? (
               (() => {
                 const currentFolderIsEmpty =
@@ -1530,7 +1645,7 @@ export default async function SharedFilesPage({
               <RailSection
                 id="current-folder-admin"
                 title="当前文件夹管理"
-                description="可重命名、移动当前目录；只有空文件夹才能删除。"
+                description="重命名、移动或删除当前目录。"
               >
                 <form action="/admin/shared-files/folder-rename" method="post" style={{ display: "grid", gap: 12 }}>
                   <input type="hidden" name="folderId" value={currentFolderRecord.id} />
@@ -1551,10 +1666,10 @@ export default async function SharedFilesPage({
                       name="name"
                       defaultValue={currentFolderRecord.name}
                       required
-                      style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }}
+                      className={fieldClass("input")}
                     />
                   </label>
-                  <button type="submit" style={{ borderRadius: 999, border: 0, background: "#111827", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
+                  <button type="submit" className={explorerButtonClass("neutral")}>
                     重命名当前文件夹
                   </button>
                 </form>
@@ -1574,7 +1689,7 @@ export default async function SharedFilesPage({
                     <select
                       name="targetParentId"
                       defaultValue={currentFolderRecord.parentId || ""}
-                      style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", background: "#fff" }}
+                      className={fieldClass("select")}
                     >
                       {currentFolderMoveOptions.map((option) => (
                         <option key={option.value || "root"} value={option.value}>
@@ -1585,7 +1700,7 @@ export default async function SharedFilesPage({
                   </label>
                   <button
                     type="submit"
-                    style={{ borderRadius: 999, border: 0, background: "#eff6ff", color: "#1d4ed8", padding: "12px 16px", fontWeight: 700 }}
+                    className={explorerButtonClass("soft")}
                   >
                     移动当前文件夹
                   </button>
@@ -1606,15 +1721,8 @@ export default async function SharedFilesPage({
                   <ConfirmSubmitButton
                     confirmMessage={`确定要删除当前文件夹“${currentFolderRecord.name}”吗？`}
                     disabled={!currentFolderIsEmpty}
-                    style={{
-                      width: "100%",
-                      padding: "12px 16px",
-                      borderRadius: 999,
-                      border: "1px solid #fecaca",
-                      background: currentFolderIsEmpty ? "#fff5f5" : "#f8fafc",
-                      color: currentFolderIsEmpty ? "#991b1b" : "#94a3b8",
-                      cursor: currentFolderIsEmpty ? "pointer" : "not-allowed",
-                    }}
+                    className={currentFolderIsEmpty ? explorerButtonClass("danger") : explorerButtonClass("neutral")}
+                    style={{ width: "100%" }}
                   >
                     {currentFolderIsEmpty ? "删除当前空文件夹" : "当前文件夹还有内容"}
                   </ConfirmSubmitButton>
@@ -1644,17 +1752,17 @@ export default async function SharedFilesPage({
                 />
                 <label style={{ display: "grid", gap: 6 }}>
                   <span>文件标题</span>
-                  <input name="title" placeholder="不填则使用原文件名" style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
+                  <input name="title" placeholder="不填则使用原文件名" className={fieldClass("input")} />
                 </label>
                 <label style={{ display: "grid", gap: 6 }}>
                   <span>备注</span>
-                  <textarea name="remarks" rows={4} style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db", resize: "vertical" }} />
+                  <textarea name="remarks" rows={4} className={fieldClass("textarea")} style={{ resize: "vertical" }} />
                 </label>
                 <label style={{ display: "grid", gap: 6 }}>
                   <span>文件</span>
-                  <input name="file" type="file" required style={{ padding: 8, borderRadius: 12, border: "1px solid #d1d5db" }} />
+                  <input name="file" type="file" required className={fieldClass("file")} />
                 </label>
-                <button type="submit" style={{ borderRadius: 999, border: 0, background: "#7f1d1d", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
+                <button type="submit" className={explorerButtonClass("primary")}>
                   上传文件
                 </button>
               </form>
@@ -1676,8 +1784,8 @@ export default async function SharedFilesPage({
                   fileSort={fileSort}
                   viewMode={viewMode}
                 />
-                <input name="name" placeholder="例如 法务 / 销售 / 交付" required style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
-                <button type="submit" style={{ borderRadius: 999, border: 0, background: "#111827", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
+                <input name="name" placeholder="例如 法务 / 销售 / 交付" required className={fieldClass("input")} />
+                <button type="submit" className={explorerButtonClass("neutral")}>
                   创建文件夹
                 </button>
               </form>
@@ -1698,8 +1806,8 @@ export default async function SharedFilesPage({
                   fileSort={fileSort}
                   viewMode={viewMode}
                 />
-                <input name="name" placeholder="例如 Legal / Sales / Delivery" required style={{ padding: 10, borderRadius: 12, border: "1px solid #d1d5db" }} />
-                <button type="submit" style={{ borderRadius: 999, border: 0, background: "#374151", color: "#fff", padding: "12px 16px", fontWeight: 700 }}>
+                <input name="name" placeholder="例如 Legal / Sales / Delivery" required className={fieldClass("input")} />
+                <button type="submit" className={explorerButtonClass("neutral")}>
                   创建分类
                 </button>
               </form>

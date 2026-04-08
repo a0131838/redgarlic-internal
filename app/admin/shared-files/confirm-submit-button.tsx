@@ -38,14 +38,17 @@ export function ConfirmSubmitButton({
 export function BulkActionSubmitButton({
   style,
   confirmMessages,
+  className,
 }: {
   style?: React.CSSProperties;
   confirmMessages?: Record<string, string>;
+  className?: string;
 }) {
   return (
     <button
       type="submit"
       style={style}
+      className={className}
       onClick={(event) => {
         const button = event.currentTarget;
         const form = button.form;
@@ -132,7 +135,7 @@ export function FolderSelectionToolbar({
         <button
           type="button"
           onClick={() => updateSelection(() => true)}
-          style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #fed7aa", background: "#fff", color: "#9a3412" }}
+          className="sf-btn sf-btn-neutral"
         >
           全选当前目录
         </button>
@@ -141,21 +144,21 @@ export function FolderSelectionToolbar({
           onClick={() =>
             updateSelection((input) => (input.dataset.folderState || "").toUpperCase() === "EMPTY")
           }
-          style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #fed7aa", background: "#fff7ed", color: "#9a3412" }}
+          className="sf-btn sf-btn-danger"
         >
           仅选空文件夹
         </button>
         <button
           type="button"
           onClick={() => updateSelection((input) => !input.checked)}
-          style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #d1d5db", background: "#fff", color: "#475569" }}
+          className="sf-btn sf-btn-neutral"
         >
           反选
         </button>
         <button
           type="button"
           onClick={() => updateSelection(() => false)}
-          style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #d1d5db", background: "#fff", color: "#475569" }}
+          className="sf-btn sf-btn-neutral"
         >
           清空选择
         </button>
@@ -241,7 +244,7 @@ export function BulkSelectionToolbar({
       <button
         type="button"
         onClick={() => updateSelection(() => true)}
-        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #bfdbfe", background: "#fff", color: "#1d4ed8" }}
+        className="sf-btn sf-btn-neutral"
       >
         全选当前页
       </button>
@@ -250,7 +253,7 @@ export function BulkSelectionToolbar({
         onClick={() =>
           updateSelection((input) => (input.dataset.fileStatus || "").toUpperCase() === "ACTIVE")
         }
-        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #bfdbfe", background: "#fff", color: "#1d4ed8" }}
+        className="sf-btn sf-btn-soft"
       >
         仅选可用
       </button>
@@ -259,7 +262,7 @@ export function BulkSelectionToolbar({
         onClick={() =>
           updateSelection((input) => (input.dataset.fileStatus || "").toUpperCase() === "ARCHIVED")
         }
-        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #bfdbfe", background: "#fff", color: "#1d4ed8" }}
+        className="sf-btn sf-btn-neutral"
       >
         仅选归档
       </button>
@@ -268,21 +271,21 @@ export function BulkSelectionToolbar({
         onClick={() =>
           updateSelection((input) => (input.dataset.fileStatus || "").toUpperCase() === "DELETED")
         }
-        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #fed7aa", background: "#fff7ed", color: "#9a3412" }}
+        className="sf-btn sf-btn-danger"
       >
         仅选待删除
       </button>
       <button
         type="button"
         onClick={() => updateSelection((input) => !input.checked)}
-        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #d1d5db", background: "#fff", color: "#475569" }}
+        className="sf-btn sf-btn-neutral"
       >
         反选
       </button>
       <button
         type="button"
         onClick={() => updateSelection(() => false)}
-        style={{ padding: "8px 12px", borderRadius: 999, border: "1px solid #d1d5db", background: "#fff", color: "#475569" }}
+        className="sf-btn sf-btn-neutral"
       >
         清空选择
       </button>

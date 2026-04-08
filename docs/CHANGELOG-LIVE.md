@@ -43,3 +43,4 @@
 - completed the cleanup loop with bulk restore-to-active support, single-file recovery from deleted state, and deleted-file selection tools in the explorer
 - added folder-level batch organization with multi-select move/delete-empty actions and clearer bulk result messages for directory cleanup
 - added desktop-style drag-and-drop move support so managers can drag files or folders onto folder cards and breadcrumb targets without opening extra forms
+- simplified the shared-file explorer layout by collapsing status chips and removing the extra quick-tool panel while upgrading buttons, inputs, and disclosures with clearer hover/press feedback
